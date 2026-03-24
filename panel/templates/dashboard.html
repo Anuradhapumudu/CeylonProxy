@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CeylonProxy</title>
+    <meta name="description" content="CeylonProxy Management Panel — Manage VLESS and Trojan proxies with ease">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon"><i class="bi bi-shield-lock-fill"></i></div>
+            <div>
+                <div class="logo-text">CeylonProxy</div>
+                <div class="logo-sub">v3.1</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            <a class="nav-item" data-tab="inbounds" onclick="switchTab('inbounds')">
+                <i class="bi bi-plug-fill"></i> Inbounds
+            </a>
+            <a class="nav-item" data-tab="speedtest" onclick="switchTab('speedtest')">
+                <i class="bi bi-lightning-charge-fill"></i> Speed Test
+            </a>
+            <a class="nav-item" data-tab="logs" onclick="switchTab('logs')">
+                <i class="bi bi-terminal-fill"></i> Xray Logs
+            </a>
+            <a class="nav-item" data-tab="ssl" onclick="switchTab('ssl')">
+                <i class="bi bi-file-earmark-lock2-fill"></i> SSL Certs
+            </a>
+            <a class="nav-item" data-tab="settings" onclick="switchTab('settings')">
+                <i class="bi bi-gear-fill"></i> Settings
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="/logout" class="nav-item logout-btn">
+                <i class="bi bi-box-arrow-left"></i> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <header class="topbar">
+            <button class="menu-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+            <h2 class="page-title" id="pageTitle">Dashboard</h2>
+            <div class="topbar-right">
+                <button class="btn btn-accent btn-quick-create" onclick="showQuickCreate()">
+                    <i class="bi bi-lightning-charge-fill"></i> Quick Create
+                </button>
+                <span class="user-badge"><i class="bi bi-person-circle"></i> {{ session.username }}</span>
+            </div>
+        </header>
+
+        <!-- Dashboard Tab -->
+        <div class="tab-content active" id="tab-dashboard">
+            <!-- VPN Control Card -->
+            <div class="vpn-control-card loading" id="vpnCard">
+                <div class="vpn-left">
+                    <div class="vpn-icon" id="vpnIcon"><i class="bi bi-shield-check"></i></div>
+                    <div class="vpn-info">
+                        <div class="vpn-title">WireGuard VPN</div>
+                        <div class="vpn-status" id="vpnStatusText"><i class="bi bi-hourglass-split"></i> Loading status...</div>
+                        <div class="vpn-ip" id="vpnIP"></div>
+                    </div>
+                </div>
+                <div class="vpn-right" id="vpnToggleWrap" style="display:none">
+                    <label class="toggle-switch" id="vpnToggleLabel">
+                        <input type="checkbox" id="vpnToggle" onchange="toggleVPN()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="bi bi-clock-history"></i></div>
+                    <div class="stat-label">Server Uptime</div>
+                    <div class="stat-value" id="statUptime">—</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="bi bi-cpu"></i></div>
+                    <div class="stat-label">CPU Usage</div>
+                    <div class="stat-value" id="statCpu">—</div>
+                    <div class="stat-bar"><div class="stat-bar-fill" id="cpuBar"></div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon teal"><i class="bi bi-memory"></i></div>
+                    <div class="stat-label">Memory Usage</div>
+                    <div class="stat-value" id="statMem">—</div>
+                    <div class="stat-bar"><div class="stat-bar-fill" id="memBar"></div></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="bi bi-lightning-charge-fill"></i></div>
+                    <div class="stat-label">Xray Status</div>
+                    <div class="stat-value" id="statXray">—</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="bi bi-globe2"></i></div>
+                    <div class="stat-label">Public IP</div>
+                    <div class="stat-value small" id="statIP">—</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon pink"><i class="bi bi-people-fill"></i></div>
+                    <div class="stat-label">Active Connections</div>
+                    <div class="stat-value" id="statConns">—</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon gold"><i class="bi bi-arrow-left-right"></i></div>
+                    <div class="stat-label">VPN Transfer</div>
+                    <div class="stat-value small" id="statTransfer">—</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon cyan"><i class="bi bi-hdd-stack"></i></div>
+                    <div class="stat-label">Disk Usage</div>
+                    <div class="stat-value small" id="statDisk">—</div>
+                    <div class="stat-bar"><div class="stat-bar-fill" id="diskBar"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inbounds Tab -->
+        <div class="tab-content" id="tab-inbounds">
+            <div class="tab-header">
+                <h3>Inbound Connections</h3>
+                <div class="tab-header-actions">
+                    <button class="btn btn-accent" onclick="showQuickCreate()">
+                        <i class="bi bi-lightning-charge-fill"></i> Quick Create
+                    </button>
+                    <button class="btn btn-secondary" onclick="showCreateInbound()">
+                        <i class="bi bi-plus-lg"></i> Advanced
+                    </button>
+                </div>
+            </div>
+            <div id="inboundsList"></div>
+        </div>
+
+        <!-- Speedtest Tab -->
+        <div class="tab-content" id="tab-speedtest">
+            <div class="tab-header"><h3><i class="bi bi-lightning-charge-fill"></i> Server Speed Test</h3></div>
+            <div class="speedtest-container">
+                <div class="speedtest-hero">
+                    <div class="speedtest-gauge" id="speedGauge">
+                        <div class="gauge-ring">
+                            <svg viewBox="0 0 200 200">
+                                <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
+                                <circle cx="100" cy="100" r="85" fill="none" stroke="url(#gaugeGrad)" stroke-width="10"
+                                    stroke-dasharray="534" stroke-dashoffset="534" stroke-linecap="round"
+                                    transform="rotate(-90 100 100)" id="gaugeCircle"/>
+                                <defs>
+                                    <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#7c3aed"/>
+                                        <stop offset="50%" stop-color="#06b6d4"/>
+                                        <stop offset="100%" stop-color="#10b981"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div class="gauge-center">
+                                <span class="gauge-value" id="gaugeValue">—</span>
+                                <span class="gauge-unit">Mbps</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-accent btn-speedtest" id="speedtestBtn" onclick="runSpeedtest()">
+                        <i class="bi bi-play-fill"></i> Run Speed Test
+                    </button>
+                    <p class="speedtest-hint" id="speedtestHint">Tests download/upload speed and latency from your server</p>
+                </div>
+                <div class="speedtest-results" id="speedtestResults" style="display:none">
+                    <div class="speed-card download">
+                        <div class="speed-icon"><i class="bi bi-arrow-down-circle-fill"></i></div>
+                        <div class="speed-label">Download</div>
+                        <div class="speed-value" id="dlSpeed">—</div>
+                        <div class="speed-unit">Mbps</div>
+                    </div>
+                    <div class="speed-card upload">
+                        <div class="speed-icon"><i class="bi bi-arrow-up-circle-fill"></i></div>
+                        <div class="speed-label">Upload</div>
+                        <div class="speed-value" id="ulSpeed">—</div>
+                        <div class="speed-unit">Mbps</div>
+                    </div>
+                    <div class="speed-card ping">
+                        <div class="speed-icon"><i class="bi bi-wifi"></i></div>
+                        <div class="speed-label">Ping</div>
+                        <div class="speed-value" id="pingValue">—</div>
+                        <div class="speed-unit">ms</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div class="tab-content" id="tab-logs">
+            <div class="tab-header">
+                <h3><i class="bi bi-terminal-fill"></i> Xray Logs</h3>
+                <div class="tab-header-actions">
+                    <select id="logType" onchange="loadLogs()" class="log-select">
+                        <option value="access">Access Log</option>
+                        <option value="error">Error Log</option>
+                    </select>
+                    <input type="text" class="log-search" id="logSearch" placeholder="Filter logs..." oninput="filterLogs()">
+                    <button class="btn btn-sm btn-secondary" id="logPauseBtn" onclick="toggleLogPause()">
+                        <i class="bi bi-pause-fill" id="logPauseIcon"></i>
+                    </button>
+                    <span class="live-indicator active" id="liveIndicator">
+                        <span class="live-dot"></span> <span id="liveText">Live</span>
+                    </span>
+                </div>
+            </div>
+            <div class="log-viewer" id="logViewer">
+                <pre id="logContent">Loading...</pre>
+            </div>
+        </div>
+
+        <!-- SSL Tab -->
+        <div class="tab-content" id="tab-ssl">
+            <div class="tab-header"><h3>SSL Certificate Management</h3></div>
+            <div class="card">
+                <div class="card-body">
+                    <p class="card-desc"><i class="bi bi-info-circle"></i> Enter your domain to automatically obtain a Let's Encrypt SSL certificate.</p>
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label><i class="bi bi-globe2"></i> Domain</label>
+                            <input type="text" id="sslDomain" placeholder="e.g. yourdomain.duckdns.org">
+                        </div>
+                        <button class="btn btn-primary" onclick="obtainSSL()" id="sslBtn">
+                            <i class="bi bi-download"></i> Obtain Certificate
+                        </button>
+                    </div>
+                    <div id="sslResult" class="result-box" style="display:none"></div>
+                    <div class="cert-info" id="certInfo"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-content" id="tab-settings">
+            <div class="tab-header"><h3>Panel Settings</h3></div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="form-group">
+                        <label><i class="bi bi-hdd-network"></i> Panel Port</label>
+                        <input type="number" id="setPanelPort" placeholder="8443">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="bi bi-diagram-3"></i> DNS Servers (comma-separated)</label>
+                        <input type="text" id="setDns" placeholder="1.1.1.1,8.8.8.8">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="bi bi-signpost-split"></i> Domain Strategy</label>
+                        <select id="setStrategy">
+                            <option value="IPIfNonMatch">IPIfNonMatch</option>
+                            <option value="AsIs">AsIs</option>
+                            <option value="IPOnDemand">IPOnDemand</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveSettings()"><i class="bi bi-check-lg"></i> Save Settings</button>
+                </div>
+            </div>
+            <div class="card" style="margin-top:20px">
+                <div class="card-body">
+                    <h4><i class="bi bi-key-fill"></i> Change Password</h4>
+                    <div class="form-row" style="margin-top:12px">
+                        <div class="form-group flex-1">
+                            <label>New Password</label>
+                            <input type="password" id="newPassword" placeholder="New password">
+                        </div>
+                        <button class="btn btn-secondary" onclick="changePassword()"><i class="bi bi-arrow-repeat"></i> Update</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card" style="margin-top:20px">
+                <div class="card-body">
+                    <h4><i class="bi bi-hdd-rack-fill"></i> Server Management</h4>
+                    <div id="serviceStatus" style="margin-top:12px;display:grid;gap:8px"></div>
+                    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+                        <button class="btn btn-warning" onclick="restartXray()"><i class="bi bi-arrow-clockwise"></i> Restart Xray</button>
+                        <button class="btn btn-danger" onclick="restartServer()" id="serverRestartBtn"><i class="bi bi-power"></i> Restart Server</button>
+                    </div>
+                </div>
+            </div>
+            <!-- System Info -->
+            <div class="card" style="margin-top:20px" id="sysInfoCard">
+                <div class="card-body">
+                    <h4><i class="bi bi-info-circle-fill"></i> System Information</h4>
+                    <div class="sys-info-grid" id="sysInfoGrid" style="margin-top:12px">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Quick Create Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeAllModals()"></div>
+    <div class="modal" id="quickModal">
+        <div class="modal-header accent-header">
+            <h3><i class="bi bi-lightning-charge-fill"></i> Quick Create V2Ray</h3>
+            <button class="modal-close" onclick="closeAllModals()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="form-group flex-1">
+                    <label><i class="bi bi-diagram-2"></i> Protocol</label>
+                    <select id="qcProtocol">
+                        <option value="vless">VLESS</option>
+                        <option value="trojan">Trojan</option>
+                    </select>
+                </div>
+                <div class="form-group flex-1">
+                    <label><i class="bi bi-ethernet"></i> Port</label>
+                    <input type="number" id="qcPort" value="443" placeholder="443">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group flex-1">
+                    <label><i class="bi bi-hdd-network"></i> Transport</label>
+                    <select id="qcTransport">
+                        <option value="tcp" selected>TCP (Fastest)</option>
+                        <option value="ws">WebSocket</option>
+                    </select>
+                </div>
+                <div class="form-group flex-1">
+                    <label><i class="bi bi-tag"></i> Name / Remark</label>
+                    <input type="text" id="qcRemark" placeholder="e.g. My-VPN">
+                </div>
+            </div>
+            <div class="form-group">
+                <label><i class="bi bi-globe"></i> SNI (for tunneling)</label>
+                <input type="text" id="qcSNI" value="teams.microsoft.com" placeholder="teams.microsoft.com">
+            </div>
+            <div class="form-group">
+                <label><i class="bi bi-person"></i> Client Email / Name</label>
+                <input type="text" id="qcEmail" placeholder="e.g. user@email.com (auto-generated if empty)">
+            </div>
+            <div class="form-row">
+                <div class="form-group flex-1">
+                    <label><i class="bi bi-speedometer"></i> Traffic (GB, 0=∞)</label>
+                    <input type="number" id="qcGB" value="0">
+                </div>
+                <div class="form-group flex-1">
+                    <label><i class="bi bi-calendar-event"></i> Expiry (days, 0=∞)</label>
+                    <input type="number" id="qcExpiry" value="0">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeAllModals()">Cancel</button>
+            <button class="btn btn-accent" id="qcBtn" onclick="quickCreate()">
+                <i class="bi bi-lightning-charge-fill"></i> Create & Get Link
+            </button>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div class="modal" id="resultModal">
+        <div class="modal-header success-header">
+            <h3><i class="bi bi-check-circle-fill"></i> V2Ray Created!</h3>
+            <button class="modal-close" onclick="closeAllModals()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body result-modal-body">
+            <div class="result-msg" id="resultMsg"></div>
+            <div class="qr-container" id="qrContainer"></div>
+            <label class="link-label"><i class="bi bi-link-45deg"></i> Share Link</label>
+            <textarea id="resultLink" class="share-link-box" readonly></textarea>
+            <button class="btn btn-primary copy-btn" onclick="copyResultLink()">
+                <i class="bi bi-clipboard"></i> Copy Link
+            </button>
+        </div>
+    </div>
+
+    <!-- Advanced Inbound Modal -->
+    <div class="modal" id="inboundModal">
+        <div class="modal-header">
+            <h3 id="modalTitle"><i class="bi bi-plus-circle"></i> New Inbound</h3>
+            <button class="modal-close" onclick="closeAllModals()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editInboundId">
+            <div class="form-group">
+                <label><i class="bi bi-tag"></i> Remark / Name</label>
+                <input type="text" id="ibRemark" placeholder="e.g. VLESS-Main">
+            </div>
+            <div class="form-row">
+                <div class="form-group flex-1">
+                    <label><i class="bi bi-diagram-2"></i> Protocol</label>
+                    <select id="ibProtocol"><option value="vless">VLESS</option><option value="trojan">Trojan</option></select>
+                </div>
+                <div class="form-group flex-1">
+                    <label><i class="bi bi-ethernet"></i> Port</label>
+                    <input type="number" id="ibPort" value="443">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group flex-1">
+                    <label><i class="bi bi-hdd-network"></i> Transport</label>
+                    <select id="ibTransport"><option value="tcp" selected>TCP (Fastest)</option><option value="ws">WebSocket</option></select>
+                </div>
+                <div class="form-group flex-1">
+                    <label><i class="bi bi-globe"></i> SNI</label>
+                    <input type="text" id="ibSNI" placeholder="teams.microsoft.com">
+                </div>
+            </div>
+            <div class="form-group">
+                <label><i class="bi bi-file-earmark-lock"></i> Certificate Path (blank = use global)</label>
+                <input type="text" id="ibCert" placeholder="Auto-filled from SSL settings">
+            </div>
+            <div class="form-group">
+                <label><i class="bi bi-key"></i> Key Path (blank = use global)</label>
+                <input type="text" id="ibKey" placeholder="Auto-filled from SSL settings">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeAllModals()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveInbound()"><i class="bi bi-check-lg"></i> Save</button>
+        </div>
+    </div>
+
+    <!-- Client Modal -->
+    <div class="modal" id="clientModal">
+        <div class="modal-header">
+            <h3><i class="bi bi-person-plus-fill"></i> Add Client</h3>
+            <button class="modal-close" onclick="closeAllModals()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="clientInboundId">
+            <div class="form-group">
+                <label><i class="bi bi-envelope"></i> Email / Remark</label>
+                <input type="text" id="clEmail" placeholder="user@email.com">
+            </div>
+            <div class="form-row">
+                <div class="form-group flex-1">
+                    <label><i class="bi bi-speedometer"></i> Traffic (GB, 0=unlimited)</label>
+                    <input type="number" id="clGB" value="0">
+                </div>
+                <div class="form-group flex-1">
+                    <label><i class="bi bi-calendar-event"></i> Expiry (days, 0=never)</label>
+                    <input type="number" id="clExpiry" value="0">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeAllModals()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveClient()"><i class="bi bi-person-plus"></i> Add Client</button>
+        </div>
+    </div>
+
+    <!-- Share Link Modal -->
+    <div class="modal" id="linkModal">
+        <div class="modal-header">
+            <h3><i class="bi bi-share-fill"></i> Share Link</h3>
+            <button class="modal-close" onclick="closeAllModals()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body result-modal-body">
+            <div class="qr-container" id="shareLinkQR"></div>
+            <textarea id="shareLink" class="share-link-box" readonly></textarea>
+            <button class="btn btn-primary copy-btn" onclick="copyLink()"><i class="bi bi-clipboard"></i> Copy Link</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+
+    <script>
+    let currentTab = 'dashboard';
+
+    function generateQR(text, container) {
+        const qr = qrcode(0, 'M'); qr.addData(text); qr.make();
+        container.innerHTML = qr.createSvgTag({cellSize: 4, margin: 4, scalable: true});
+    }
+
+    function timeAgo(dateStr) {
+        if (!dateStr) return '—';
+        const date = new Date(dateStr + (dateStr.includes('Z') ? '' : 'Z'));
+        const diffMs = new Date() - date;
+        const m = Math.floor(diffMs / 60000);
+        if (m < 1) return 'Just now';
+        if (m < 60) return `${m}m ago`;
+        const h = Math.floor(m / 60);
+        if (h < 24) return `${h}h ago`;
+        const d = Math.floor(h / 24);
+        if (d < 30) return `${d}d ago`;
+        return date.toLocaleDateString();
+    }
+
+    function formatBytes(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024, sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    let logAutoRefreshTimer = null;
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+        document.getElementById('pageTitle').textContent =
+            {dashboard:'Dashboard', inbounds:'Inbounds', speedtest:'Speed Test', logs:'Xray Logs', ssl:'SSL Certificates', settings:'Settings'}[tab];
+        currentTab = tab;
+
+        // Stop log auto-refresh when leaving logs tab
+        if (logAutoRefreshTimer) { clearInterval(logAutoRefreshTimer); logAutoRefreshTimer = null; }
+
+        if (tab === 'dashboard') { loadStats(); loadVPNStatus(); }
+        if (tab === 'inbounds') loadInbounds();
+        if (tab === 'settings') { loadSettings(); loadSystemInfo(); loadServiceStatus(); }
+        if (tab === 'ssl') loadSSLInfo();
+        if (tab === 'speedtest') loadSpeedtestStatus();
+        if (tab === 'logs') {
+            loadLogs();
+            // Auto-refresh every 3 seconds
+            logAutoRefreshTimer = setInterval(loadLogs, 3000);
+        }
+    }
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+
+    function toast(msg, type='success') {
+        const t = document.getElementById('toast');
+        t.innerHTML = `<i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill'}"></i> ${msg}`;
+        t.className = 'toast show ' + type;
+        setTimeout(() => t.className = 'toast', 3500);
+    }
+
+    async function api(url, opts={}) {
+        try {
+            const res = await fetch(url, { headers: {'Content-Type': 'application/json'}, ...opts });
+            if (res.status === 401) { window.location = '/login'; return null; }
+            return await res.json();
+        } catch(e) { toast('Network error: ' + e.message, 'error'); return null; }
+    }
+
+    // ─── VPN Toggle ─────────────────────────────────────────────────
+    async function loadVPNStatus() {
+        const data = await api('/api/vpn/status');
+        if (!data?.success) return;
+        const toggle = document.getElementById('vpnToggle');
+        const icon = document.getElementById('vpnIcon');
+        const status = document.getElementById('vpnStatusText');
+        const ipEl = document.getElementById('vpnIP');
+        const card = document.getElementById('vpnCard');
+        const toggleWrap = document.getElementById('vpnToggleWrap');
+
+        // Remove loading state and reveal toggle
+        card.classList.remove('loading');
+        toggleWrap.style.display = 'flex';
+
+        toggle.checked = data.connected;
+        if (data.connected) {
+            card.classList.add('connected');
+            card.classList.remove('disconnected');
+            icon.innerHTML = '<i class="bi bi-shield-fill-check"></i>';
+            status.textContent = 'Connected via Surfshark VPN';
+            status.className = 'vpn-status connected';
+        } else {
+            card.classList.add('disconnected');
+            card.classList.remove('connected');
+            icon.innerHTML = '<i class="bi bi-shield-fill-x"></i>';
+            status.textContent = 'Disconnected — Direct tunnel';
+            status.className = 'vpn-status disconnected';
+        }
+        let ipText = `Tunnel IP: ${data.tunnel_ip || '—'}`;
+        if (data.server_ip && data.connected) ipText += ` | Server: ${data.server_ip}`;
+        if (!data.connected) ipText = `Server IP: ${data.server_ip || '—'}`;
+        if (data.transfer) ipText += ` | ${data.transfer}`;
+        ipEl.textContent = ipText;
+    }
+
+    async function toggleVPN() {
+        const toggle = document.getElementById('vpnToggle');
+        const card = document.getElementById('vpnCard');
+        const status = document.getElementById('vpnStatusText');
+        const toggleWrap = document.getElementById('vpnToggleWrap');
+
+        status.textContent = toggle.checked ? '⏳ Connecting...' : '⏳ Disconnecting...';
+        card.classList.add('toggling');
+        toggleWrap.style.display = 'none';  // Hide toggle during operation
+
+        const res = await api('/api/vpn/toggle', {method:'POST'});
+        card.classList.remove('toggling');
+
+        if (res?.success) {
+            toast(res.msg);
+            // Wait for IP to stabilize, then reload with toggle reveal
+            setTimeout(loadVPNStatus, 3000);
+        } else {
+            toast(res?.msg || 'Failed to toggle VPN', 'error');
+            toggle.checked = !toggle.checked;
+            toggleWrap.style.display = 'flex';  // Re-show on error
+        }
+    }
+
+    // ─── Dashboard ──────────────────────────────────────────────────
+    async function loadStats() {
+        const data = await api('/api/stats');
+        if (!data) return;
+        document.getElementById('statUptime').textContent = data.uptime || '—';
+        const cpuPct = data.cpu_pct || 0;
+        document.getElementById('statCpu').textContent = cpuPct + '%';
+        document.getElementById('cpuBar').style.width = cpuPct + '%';
+        document.getElementById('cpuBar').style.background = cpuPct > 80 ? '#ef4444' : cpuPct > 50 ? '#f59e0b' : '#8b5cf6';
+        document.getElementById('statMem').textContent = data.mem_pct ? data.mem_pct + '%' : '—';
+        document.getElementById('memBar').style.width = (data.mem_pct || 0) + '%';
+        document.getElementById('memBar').style.background = data.mem_pct > 80 ? '#ef4444' : data.mem_pct > 50 ? '#f59e0b' : '#10b981';
+        const xrayEl = document.getElementById('statXray');
+        xrayEl.textContent = data.xray_status || '—';
+        xrayEl.className = 'stat-value ' + (data.xray_status === 'ACTIVE' ? 'text-green' : 'text-red');
+        document.getElementById('statIP').textContent = data.public_ip || '—';
+        document.getElementById('statConns').textContent = data.active_connections ?? '—';
+        document.getElementById('statTransfer').textContent = data.wg_transfer || '—';
+    }
+
+    // ─── Quick Create ───────────────────────────────────────────────
+    function showQuickCreate() {
+        document.getElementById('qcRemark').value = '';
+        document.getElementById('qcProtocol').value = 'vless';
+        document.getElementById('qcPort').value = '443';
+        document.getElementById('qcTransport').value = 'tcp';
+        document.getElementById('qcSNI').value = 'teams.microsoft.com';
+        document.getElementById('qcEmail').value = '';
+        document.getElementById('qcGB').value = '0';
+        document.getElementById('qcExpiry').value = '0';
+        openModal('quickModal');
+    }
+
+    async function quickCreate() {
+        const btn = document.getElementById('qcBtn');
+        btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating...';
+        const body = {
+            remark: document.getElementById('qcRemark').value || undefined,
+            protocol: document.getElementById('qcProtocol').value,
+            port: document.getElementById('qcPort').value,
+            transport: document.getElementById('qcTransport').value,
+            sni: document.getElementById('qcSNI').value,
+            email: document.getElementById('qcEmail').value || undefined,
+            total_gb: document.getElementById('qcGB').value,
+            expiry_days: document.getElementById('qcExpiry').value
+        };
+        const res = await api('/api/quick-create', {method:'POST', body:JSON.stringify(body)});
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-lightning-charge-fill"></i> Create & Get Link';
+        if (res?.success) {
+            closeAllModals();
+            document.getElementById('resultMsg').textContent = res.msg;
+            document.getElementById('resultLink').value = res.link;
+            generateQR(res.link, document.getElementById('qrContainer'));
+            openModal('resultModal');
+            loadInbounds();
+        } else { toast(res?.msg || 'Error', 'error'); }
+    }
+
+    function copyResultLink() {
+        const el = document.getElementById('resultLink'); el.select();
+        navigator.clipboard.writeText(el.value).then(() => toast('Copied!'));
+    }
+
+    // ─── Inbounds ───────────────────────────────────────────────────
+    async function loadInbounds() {
+        const data = await api('/api/inbounds');
+        if (!data?.success) return;
+        const container = document.getElementById('inboundsList');
+        if (data.inbounds.length === 0) {
+            container.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted)">
+                <i class="bi bi-lightning-charge" style="font-size:2.5rem;display:block;margin-bottom:0.75rem;opacity:0.4"></i>
+                No inbounds yet. Click <strong>"Quick Create"</strong> to get started!</div>`;
+            return;
+        }
+        container.innerHTML = data.inbounds.map(ib => `
+            <div class="inbound-card">
+                <div class="inbound-header" onclick="this.parentElement.querySelector('.inbound-body').classList.toggle('collapsed')">
+                    <div class="inbound-meta">
+                        <div class="inbound-name">
+                            <span class="status-dot ${ib.enable ? 'active' : 'inactive'}"></span>
+                            ${ib.remark}
+                            <span class="badge badge-${ib.protocol}">${ib.protocol.toUpperCase()}</span>
+                            <span class="badge badge-${ib.protocol}" style="opacity:0.7">${(ib.transport || 'tcp').toUpperCase()}</span>
+                        </div>
+                        <div class="inbound-details">
+                            <span><i class="bi bi-ethernet"></i> :${ib.port}</span>
+                            ${ib.sni ? `<span><i class="bi bi-globe2"></i> ${ib.sni}</span>` : ''}
+                            <span><i class="bi bi-people-fill"></i> ${ib.client_count} clients</span>
+                            <span><i class="bi bi-clock"></i> ${timeAgo(ib.created_at)}</span>
+                        </div>
+                    </div>
+                    <div class="inbound-actions" onclick="event.stopPropagation()">
+                        <button class="btn btn-xs btn-secondary" title="Add Client" onclick="showAddClient(${ib.id})"><i class="bi bi-person-plus-fill"></i></button>
+                        <button class="btn btn-xs btn-secondary" title="Edit" onclick="editInbound(${ib.id})"><i class="bi bi-pencil-square"></i></button>
+                        <button class="btn btn-xs btn-danger" title="Delete" onclick="deleteInbound(${ib.id}, '${ib.remark}')"><i class="bi bi-trash3-fill"></i></button>
+                    </div>
+                </div>
+                <div class="inbound-body">
+                    ${ib.clients.length > 0 ? ib.clients.map(c => `
+                        <div class="client-row ${c.enable ? '' : 'disabled-row'}">
+                            <div class="client-info">
+                                <div class="client-email"><span class="status-dot ${c.enable ? 'active' : 'inactive'}"></span> ${c.email}</div>
+                                <div class="client-meta">
+                                    <span>↑ ${formatBytes(c.upload)}</span>
+                                    <span>↓ ${formatBytes(c.download)}</span>
+                                    <span>${timeAgo(c.created_at)}</span>
+                                    ${c.expiry_time > 0 ? `<span>⏰ ${new Date(c.expiry_time).toLocaleDateString()}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="client-actions">
+                                <button class="btn btn-xs btn-secondary" onclick="getShareLink(${c.id})" title="QR & Link"><i class="bi bi-qr-code"></i></button>
+                                <button class="btn btn-xs btn-secondary" onclick="copyClientLink(${c.id})" title="Copy Link"><i class="bi bi-clipboard"></i></button>
+                                <button class="btn btn-xs btn-secondary" onclick="toggleClient(${c.id})" title="Toggle"><i class="bi bi-${c.enable ? 'pause-circle' : 'play-circle'}"></i></button>
+                                <button class="btn btn-xs btn-danger" onclick="deleteClient(${c.id}, '${c.email}')"><i class="bi bi-trash3"></i></button>
+                            </div>
+                        </div>
+                    `).join('') : `<div style="padding:1rem 0;color:var(--text-muted);font-size:0.82rem"><i class="bi bi-person-plus" style="margin-right:6px"></i>No clients yet</div>`}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ─── Inbound CRUD ───────────────────────────────────────────────
+    function showCreateInbound() {
+        document.getElementById('editInboundId').value = '';
+        document.getElementById('modalTitle').innerHTML = '<i class="bi bi-plus-circle"></i> New Inbound';
+        document.getElementById('ibRemark').value = '';
+        document.getElementById('ibProtocol').value = 'vless';
+        document.getElementById('ibPort').value = '443';
+        document.getElementById('ibTransport').value = 'tcp';
+        document.getElementById('ibSNI').value = 'teams.microsoft.com';
+        document.getElementById('ibCert').value = '';
+        document.getElementById('ibKey').value = '';
+        openModal('inboundModal');
+    }
+
+    async function editInbound(id) {
+        const data = await api('/api/inbounds');
+        if (!data) return;
+        const ib = data.inbounds.find(i => i.id === id);
+        if (!ib) return;
+        document.getElementById('editInboundId').value = id;
+        document.getElementById('modalTitle').innerHTML = '<i class="bi bi-pencil-square"></i> Edit Inbound';
+        document.getElementById('ibRemark').value = ib.remark;
+        document.getElementById('ibProtocol').value = ib.protocol;
+        document.getElementById('ibPort').value = ib.port;
+        document.getElementById('ibTransport').value = ib.transport || 'tcp';
+        document.getElementById('ibSNI').value = ib.sni;
+        document.getElementById('ibCert').value = ib.cert_path;
+        document.getElementById('ibKey').value = ib.key_path;
+        openModal('inboundModal');
+    }
+
+    async function saveInbound() {
+        const id = document.getElementById('editInboundId').value;
+        const body = {
+            remark: document.getElementById('ibRemark').value,
+            protocol: document.getElementById('ibProtocol').value,
+            port: document.getElementById('ibPort').value,
+            transport: document.getElementById('ibTransport').value,
+            sni: document.getElementById('ibSNI').value,
+            cert_path: document.getElementById('ibCert').value,
+            key_path: document.getElementById('ibKey').value,
+            enable: 1
+        };
+        const res = id
+            ? await api(`/api/inbounds/${id}`, {method:'PUT', body:JSON.stringify(body)})
+            : await api('/api/inbounds', {method:'POST', body:JSON.stringify(body)});
+        if (res?.success) { toast(res.msg); closeAllModals(); loadInbounds(); }
+        else { toast(res?.msg || 'Error', 'error'); }
+    }
+
+    async function deleteInbound(id, name) {
+        if (!confirm(`Delete inbound "${name}" and all its clients?`)) return;
+        const res = await api(`/api/inbounds/${id}`, {method:'DELETE'});
+        if (res?.success) { toast('Deleted'); loadInbounds(); }
+    }
+
+    function showAddClient(inboundId) {
+        document.getElementById('clientInboundId').value = inboundId;
+        document.getElementById('clEmail').value = '';
+        document.getElementById('clGB').value = '0';
+        document.getElementById('clExpiry').value = '0';
+        openModal('clientModal');
+    }
+
+    async function saveClient() {
+        const body = {
+            inbound_id: document.getElementById('clientInboundId').value,
+            email: document.getElementById('clEmail').value,
+            total_gb: document.getElementById('clGB').value,
+            expiry_days: document.getElementById('clExpiry').value
+        };
+        const res = await api('/api/clients', {method:'POST', body:JSON.stringify(body)});
+        if (res?.success) { toast('Client added'); closeAllModals(); loadInbounds(); }
+        else { toast(res?.msg || 'Error', 'error'); }
+    }
+
+    async function deleteClient(id, email) {
+        if (!confirm(`Delete client "${email}"?`)) return;
+        const res = await api(`/api/clients/${id}`, {method:'DELETE'});
+        if (res?.success) { toast('Client deleted'); loadInbounds(); }
+    }
+
+    async function toggleClient(id) {
+        const res = await api(`/api/clients/${id}/toggle`, {method:'POST'});
+        if (res?.success) loadInbounds();
+    }
+
+    async function getShareLink(clientId) {
+        const res = await api(`/api/clients/${clientId}/link`);
+        if (res?.success) {
+            document.getElementById('shareLink').value = res.link;
+            generateQR(res.link, document.getElementById('shareLinkQR'));
+            openModal('linkModal');
+        } else { toast(res?.msg || 'Error', 'error'); }
+    }
+
+    function copyLink() {
+        const el = document.getElementById('shareLink'); el.select();
+        navigator.clipboard.writeText(el.value).then(() => toast('Link copied!'));
+    }
+
+    async function copyClientLink(clientId) {
+        const res = await api(`/api/clients/${clientId}/link`);
+        if (res?.success) {
+            navigator.clipboard.writeText(res.link).then(() => toast('Link copied!'));
+        }
+    }
+
+    // ─── Speedtest ──────────────────────────────────────────────────
+    let speedtestPoller = null;
+
+    async function runSpeedtest() {
+        const btn = document.getElementById('speedtestBtn');
+        btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Testing...';
+        document.getElementById('speedtestHint').textContent = 'Running... 15-30 seconds';
+        document.getElementById('speedtestResults').style.display = 'none';
+        document.getElementById('gaugeValue').textContent = '...';
+        const circle = document.getElementById('gaugeCircle');
+        circle.style.transition = 'stroke-dashoffset 15s linear';
+        circle.style.strokeDashoffset = '134';
+        const res = await api('/api/speedtest', {method:'POST'});
+        if (!res?.success) { toast(res?.msg || 'Failed', 'error'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-play-fill"></i> Run Speed Test'; return; }
+        speedtestPoller = setInterval(async () => {
+            const st = await api('/api/speedtest/status');
+            if (!st?.running && st?.result) { clearInterval(speedtestPoller); displaySpeedtestResults(st.result); btn.disabled = false; btn.innerHTML = '<i class="bi bi-play-fill"></i> Run Again'; }
+        }, 2000);
+    }
+
+    function displaySpeedtestResults(result) {
+        const circle = document.getElementById('gaugeCircle');
+        circle.style.transition = 'stroke-dashoffset 1s ease';
+        if (result.status === 'completed') {
+            const pct = Math.min(result.download_mbps / 100, 1);
+            circle.style.strokeDashoffset = 534 - (534 * pct);
+            document.getElementById('gaugeValue').textContent = result.download_mbps;
+            document.getElementById('dlSpeed').textContent = result.download_mbps;
+            document.getElementById('ulSpeed').textContent = result.upload_mbps;
+            document.getElementById('pingValue').textContent = result.ping_ms >= 0 ? result.ping_ms.toFixed(1) : '—';
+            document.getElementById('speedtestResults').style.display = 'grid';
+            document.getElementById('speedtestHint').textContent = 'Test completed!';
+        } else {
+            document.getElementById('gaugeValue').textContent = '!';
+            document.getElementById('speedtestHint').textContent = 'Failed: ' + (result.error || 'Unknown');
+            circle.style.strokeDashoffset = '534';
+        }
+    }
+
+    async function loadSpeedtestStatus() {
+        const st = await api('/api/speedtest/status');
+        if (st?.result?.status === 'completed') { displaySpeedtestResults(st.result); document.getElementById('speedtestBtn').innerHTML = '<i class="bi bi-play-fill"></i> Run Again'; }
+    }
+
+    // ─── Logs ───────────────────────────────────────────────────────
+    let _logRawContent = '';
+    let _logPaused = false;
+
+    async function loadLogs() {
+        if (_logPaused) return;
+        const logType = document.getElementById('logType').value;
+        const res = await api(`/api/xray/logs?type=${logType}&lines=150`);
+        if (res?.success) {
+            _logRawContent = res.logs || 'No logs available';
+            filterLogs();
+        }
+    }
+
+    function filterLogs() {
+        const search = (document.getElementById('logSearch')?.value || '').toLowerCase();
+        const content = document.getElementById('logContent');
+        const viewer = document.getElementById('logViewer');
+        const wasAtBottom = viewer.scrollTop + viewer.clientHeight >= viewer.scrollHeight - 50;
+        if (search) {
+            const lines = _logRawContent.split('\n').filter(l => l.toLowerCase().includes(search));
+            content.textContent = lines.join('\n') || 'No matching logs';
+        } else {
+            content.textContent = _logRawContent;
+        }
+        if (wasAtBottom) viewer.scrollTop = viewer.scrollHeight;
+    }
+
+    function toggleLogPause() {
+        _logPaused = !_logPaused;
+        const icon = document.getElementById('logPauseIcon');
+        const indicator = document.getElementById('liveIndicator');
+        const text = document.getElementById('liveText');
+        if (_logPaused) {
+            icon.className = 'bi bi-play-fill';
+            indicator.className = 'live-indicator paused';
+            text.textContent = 'Paused';
+        } else {
+            icon.className = 'bi bi-pause-fill';
+            indicator.className = 'live-indicator active';
+            text.textContent = 'Live';
+            loadLogs();
+        }
+    }
+
+    // ─── Browser Ping ───────────────────────────────────────────────
+    async function measurePing() {
+        try {
+            const start = performance.now();
+            await fetch('/api/ping', {cache: 'no-store'});
+            return Math.round(performance.now() - start);
+        } catch { return -1; }
+    }
+
+    // ─── SSL ────────────────────────────────────────────────────────
+    async function loadSSLInfo() {
+        const data = await api('/api/settings');
+        if (!data?.success) return;
+        const s = data.settings;
+        document.getElementById('sslDomain').value = s.panel_domain || '';
+        const info = document.getElementById('certInfo');
+        if (s.panel_cert) {
+            info.innerHTML = `<div class="cert-detail"><i class="bi bi-globe2"></i> <strong>Domain:</strong> ${s.panel_domain}</div><div class="cert-detail"><i class="bi bi-file-earmark-lock"></i> <strong>Cert:</strong> ${s.panel_cert}</div><div class="cert-detail"><i class="bi bi-key"></i> <strong>Key:</strong> ${s.panel_key}</div>`;
+        } else { info.innerHTML = '<p class="card-desc"><i class="bi bi-info-circle"></i> No certificate configured yet</p>'; }
+    }
+
+    async function obtainSSL() {
+        const domain = document.getElementById('sslDomain').value.trim();
+        if (!domain) { toast('Enter a domain', 'error'); return; }
+        const btn = document.getElementById('sslBtn');
+        btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Obtaining...';
+        const res = await api('/api/ssl/obtain', {method:'POST', body:JSON.stringify({domain})});
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-download"></i> Obtain Certificate';
+        const box = document.getElementById('sslResult'); box.style.display = 'block';
+        if (res?.success) { box.className = 'result-box success'; box.innerHTML = `<i class="bi bi-check-circle-fill"></i> ${res.msg}`; loadSSLInfo(); }
+        else { box.className = 'result-box error'; box.innerHTML = `<i class="bi bi-x-circle-fill"></i> ${res?.msg || 'Failed'}`; }
+    }
+
+    // ─── Settings ───────────────────────────────────────────────────
+    async function loadSettings() {
+        const data = await api('/api/settings');
+        if (!data?.success) return;
+        document.getElementById('setPanelPort').value = data.settings.panel_port || '8443';
+        document.getElementById('setDns').value = data.settings.xray_dns || '1.1.1.1,8.8.8.8';
+        document.getElementById('setStrategy').value = data.settings.domain_strategy || 'IPIfNonMatch';
+    }
+
+    async function saveSettings() {
+        const body = { panel_port: document.getElementById('setPanelPort').value, xray_dns: document.getElementById('setDns').value, domain_strategy: document.getElementById('setStrategy').value };
+        const res = await api('/api/settings', {method:'POST', body:JSON.stringify(body)});
+        if (res?.success) toast('Settings saved');
+    }
+
+    async function changePassword() {
+        const pw = document.getElementById('newPassword').value;
+        if (!pw || pw.length < 4) { toast('Password too short', 'error'); return; }
+        const res = await api('/api/password', {method:'POST', body:JSON.stringify({password: pw})});
+        if (res?.success) { toast('Password changed'); document.getElementById('newPassword').value = ''; }
+    }
+
+    async function restartXray() {
+        const res = await api('/api/xray/restart', {method:'POST'});
+        if (res?.success) { toast('Xray restarted'); loadServiceStatus(); }
+        else toast(res?.msg || 'Failed', 'error');
+    }
+
+    async function restartServer() {
+        if (!confirm('⚠️ Are you sure you want to restart the server?\n\nAll connections will be dropped temporarily.\nThe panel will be unavailable for 30-60 seconds.')) return;
+        const btn = document.getElementById('serverRestartBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Restarting...';
+        const res = await api('/api/server/restart', {method:'POST'});
+        if (res?.success) {
+            toast(res.msg);
+            // Show countdown overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:inherit';
+            let countdown = 45;
+            overlay.innerHTML = `<i class="bi bi-arrow-clockwise" style="font-size:3rem;animation:spin 1s linear infinite"></i><h2 style="margin:1rem 0 0.5rem">Server Restarting</h2><p id="rebootCountdown">Reconnecting in ${countdown}s...</p>`;
+            document.body.appendChild(overlay);
+            const timer = setInterval(() => {
+                countdown--;
+                const el = document.getElementById('rebootCountdown');
+                if (el) el.textContent = `Reconnecting in ${countdown}s...`;
+                if (countdown <= 0) {
+                    clearInterval(timer);
+                    location.reload();
+                }
+            }, 1000);
+        } else { toast(res?.msg || 'Failed', 'error'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-power"></i> Restart Server'; }
+    }
+
+    async function loadServiceStatus() {
+        const res = await api('/api/server/services');
+        if (!res?.success) return;
+        const container = document.getElementById('serviceStatus');
+        if (!container) return;
+        const svcNames = {'ceylonproxy-panel': 'VPN Panel', 'xray': 'Xray Core', 'wg-quick@wg0': 'WireGuard'};
+        container.innerHTML = Object.entries(res.services).map(([svc, status]) => `
+            <div style="display:flex;align-items:center;gap:8px;font-size:0.85rem">
+                <span class="status-dot ${status === 'active' ? 'active' : 'inactive'}"></span>
+                <span style="font-weight:600">${svcNames[svc] || svc}</span>
+                <span style="color:${status === 'active' ? 'var(--green)' : 'var(--red)'};margin-left:auto;font-size:0.78rem">${status.toUpperCase()}</span>
+            </div>
+        `).join('');
+    }
+
+    async function loadSystemInfo() {
+        const res = await api('/api/system/info');
+        if (!res?.success) return;
+        const i = res.info;
+        document.getElementById('sysInfoGrid').innerHTML = `
+            <div class="sys-info-row"><span class="sys-info-label">OS</span><span class="sys-info-value">${i.os || '—'}</span></div>
+            <div class="sys-info-row"><span class="sys-info-label">Kernel</span><span class="sys-info-value">${i.kernel || '—'}</span></div>
+            <div class="sys-info-row"><span class="sys-info-label">Hostname</span><span class="sys-info-value">${i.hostname || '—'}</span></div>
+            <div class="sys-info-row"><span class="sys-info-label">Disk</span><span class="sys-info-value">${i.disk_used || '—'} / ${i.disk_total || '—'} (${i.disk_pct || '—'})</span></div>
+            <div class="sys-info-row"><span class="sys-info-label">Xray</span><span class="sys-info-value">${i.xray_version || '—'}</span></div>
+        `;
+        // Also update dashboard disk card
+        if (i.disk_pct) {
+            document.getElementById('statDisk').textContent = `${i.disk_used} / ${i.disk_total}`;
+            const pct = parseInt(i.disk_pct);
+            document.getElementById('diskBar').style.width = pct + '%';
+            document.getElementById('diskBar').style.background = pct > 80 ? '#ef4444' : pct > 60 ? '#f59e0b' : '#06b6d4';
+        }
+    }
+
+    // ─── Modals ─────────────────────────────────────────────────────
+    function openModal(id) { document.getElementById('modalOverlay').classList.add('show'); document.getElementById(id).classList.add('show'); }
+    function closeAllModals() { document.getElementById('modalOverlay').classList.remove('show'); document.querySelectorAll('.modal').forEach(m => m.classList.remove('show')); }
+
+    // ─── Init ───────────────────────────────────────────────────────
+    loadStats();
+    loadVPNStatus();
+    loadSystemInfo();
+    // Measure initial ping
+    measurePing().then(ms => {
+        if (ms > 0) {
+            const cls = ms < 100 ? 'good' : ms < 250 ? 'fair' : 'poor';
+            const badge = document.createElement('span');
+            badge.className = `latency-badge ${cls}`;
+            badge.innerHTML = `<i class="bi bi-wifi"></i> ${ms}ms`;
+            document.getElementById('vpnStatusText')?.after(badge);
+        }
+    });
+    setInterval(() => { if (currentTab === 'dashboard') { loadStats(); loadVPNStatus(); } }, 10000);
+    </script>
+</body>
+</html>
