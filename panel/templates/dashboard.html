@@ -24,9 +24,6 @@
             <a class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
-            <a class="nav-item" data-tab="stats" onclick="switchTab('stats')">
-                <i class="bi bi-activity"></i> System Stats
-            </a>
             <a class="nav-item" data-tab="inbounds" onclick="switchTab('inbounds')">
                 <i class="bi bi-plug-fill"></i> Inbounds
             </a>
@@ -66,17 +63,12 @@
 
         <!-- Dashboard Tab -->
         <div class="tab-content active" id="tab-dashboard">
-            <div class="dashboard-hero" style="margin-bottom: 2rem;">
-                <h1 style="font-size: 2.2rem; margin-bottom: 0.5rem; font-family: var(--font-heading); background: linear-gradient(90deg, #fff, #94a3b8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Mission Control</h1>
-                <p style="color: var(--text-muted); font-size: 1.05rem;">Manage your active proxies and oversee incoming network connections securely.</p>
-            </div>
-
             <!-- VPN Control Card -->
-            <div class="vpn-control-card loading" id="vpnCard" style="margin-bottom: 1.5rem;">
+            <div class="vpn-control-card loading" id="vpnCard">
                 <div class="vpn-left">
                     <div class="vpn-icon" id="vpnIcon"><i class="bi bi-shield-check"></i></div>
                     <div class="vpn-info">
-                        <div class="vpn-title">WireGuard VPN Interface</div>
+                        <div class="vpn-title">WireGuard VPN</div>
                         <div class="vpn-status" id="vpnStatusText"><i class="bi bi-hourglass-split"></i> Loading status...</div>
                         <div class="vpn-ip" id="vpnIP"></div>
                     </div>
@@ -89,145 +81,57 @@
                 </div>
             </div>
 
-            <div class="stats-grid" id="dashboardGrid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-                <div class="stat-card">
-                    <div class="stat-header-row">
-                        <div>
-                            <div class="stat-icon pink"><i class="bi bi-people-fill"></i></div>
-                            <div class="stat-label">Active Connections</div>
-                            <div class="stat-value" id="dashConns">—</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-header-row">
-                        <div>
-                            <div class="stat-icon green"><i class="bi bi-lightning-charge-fill"></i></div>
-                            <div class="stat-label">Xray Status</div>
-                            <div class="stat-value" id="dashXray">—</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="stat-card span-2">
-                    <div class="stat-header-row">
-                        <div>
-                            <div class="stat-icon gold"><i class="bi bi-arrow-left-right"></i></div>
-                            <div class="stat-label">VPN Transfer</div>
-                            <div class="stat-value small" id="dashTransfer">—</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- System Stats Tab -->
-        <div class="tab-content" id="tab-stats">
-            <div class="tab-header">
-                <h3>System Telemetry</h3>
-            </div>
-            
             <div class="chart-card">
                 <canvas id="trafficChart"></canvas>
             </div>
 
-            <div class="stats-grid" id="statsGrid">
-                <div class="stat-card">
-                    <div class="stat-header-row">
-                        <div>
-                            <div class="stat-icon blue"><i class="bi bi-clock-history"></i></div>
-                            <div class="stat-label">Server Uptime</div>
-                            <div class="stat-value" id="statUptime">—</div>
-                        </div>
+            <div class="gauges-container">
+                <div class="gauge-card">
+                    <div class="gauge-wrap">
+                        <svg viewBox="0 0 100 55">
+                            <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" />
+                            <path class="gauge-progress" id="cpuRing" stroke="#10b981" d="M 10 50 A 40 40 0 0 1 90 50" stroke-dasharray="0, 126" />
+                        </svg>
+                        <div class="gauge-value" id="statCpuPct">0%</div>
                     </div>
+                    <div class="gauge-label">CPU</div>
+                    <div class="gauge-sub">Utilization</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-header-row">
-                        <div>
-                            <div class="stat-icon purple"><i class="bi bi-cpu"></i></div>
-                            <div class="stat-label">CPU Usage</div>
-                            <div class="stat-value" id="statCpu">—</div>
-                        </div>
-                        <div class="circle-wrap">
-                            <svg viewBox="0 0 36 36">
-                                <path class="circle-bg" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
-                                <path class="circle-progress" id="cpuRing" stroke="#8b5cf6" stroke-dasharray="0, 100" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
-                            </svg>
-                        </div>
+
+                <div class="gauge-card">
+                    <div class="gauge-wrap">
+                        <svg viewBox="0 0 100 55">
+                            <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" />
+                            <path class="gauge-progress" id="memRing" stroke="#3b82f6" d="M 10 50 A 40 40 0 0 1 90 50" stroke-dasharray="0, 126" />
+                        </svg>
+                        <div class="gauge-value" id="statMemPct">0%</div>
                     </div>
+                    <div class="gauge-label">Memory</div>
+                    <div class="gauge-sub" id="statMemDetail">— / —</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-header-row">
-                        <div>
-                            <div class="stat-icon teal"><i class="bi bi-memory"></i></div>
-                            <div class="stat-label">Memory Usage</div>
-                            <div class="stat-value" id="statMem">—</div>
-                        </div>
-                        <div class="circle-wrap">
-                            <svg viewBox="0 0 36 36">
-                                <path class="circle-bg" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
-                                <path class="circle-progress" id="memRing" stroke="#10b981" stroke-dasharray="0, 100" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
-                            </svg>
-                        </div>
+
+                <div class="gauge-card">
+                    <div class="gauge-wrap">
+                        <svg viewBox="0 0 100 55">
+                            <path class="gauge-bg" d="M 10 50 A 40 40 0 0 1 90 50" />
+                            <path class="gauge-progress" id="diskRing" stroke="#06b6d4" d="M 10 50 A 40 40 0 0 1 90 50" stroke-dasharray="0, 126" />
+                        </svg>
+                        <div class="gauge-value" id="statDiskPct">0%</div>
                     </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-header-row">
-                        <div>
-                            <div class="stat-icon orange"><i class="bi bi-globe2"></i></div>
-                            <div class="stat-label">Public IP</div>
-                            <div class="stat-value small" id="statIP">—</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="stat-card span-2">
-                    <div class="stat-header-row">
-                        <div>
-                            <div class="stat-icon cyan"><i class="bi bi-hdd-stack"></i></div>
-                            <div class="stat-label">Disk Usage</div>
-                            <div class="stat-value small" id="statDisk">—</div>
-                        </div>
-                        <div class="circle-wrap">
-                            <svg viewBox="0 0 36 36">
-                                <path class="circle-bg" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
-                                <path class="circle-progress" id="diskRing" stroke="#06b6d4" stroke-dasharray="0, 100" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
-                            </svg>
-                        </div>
-                    </div>
+                    <div class="gauge-label">Disk Storage</div>
+                    <div class="gauge-sub" id="statDiskDetail">— / —</div>
                 </div>
             </div>
-        </div>
-                <div class="stat-card">
-                    <div class="stat-header-row">
-                        <div>
-                            <div class="stat-icon orange"><i class="bi bi-globe2"></i></div>
-                            <div class="stat-label">Public IP</div>
-                            <div class="stat-value small" id="statIP">—</div>
-                        </div>
-                    </div>
+
+            <div class="info-rows border-box">
+                <div class="info-banner">
+                    <div class="info-item"><span>Server Uptime:</span> <strong class="badge" id="statUptime">—</strong></div>
+                    <div class="info-item"><span>Xray Status:</span> <strong class="badge badge-green" id="statXray">—</strong></div>
+                    <div class="info-item"><span>Active Conns:</span> <strong class="badge badge-blue" id="statConns">—</strong></div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-header-row">
-                        <div>
-                            <div class="stat-icon pink"><i class="bi bi-people-fill"></i></div>
-                            <div class="stat-label">Active Connections</div>
-                            <div class="stat-value" id="statConns">—</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="stat-card span-2">
-                    <div class="stat-header-row">
-                        <div>
-                            <div class="stat-icon cyan"><i class="bi bi-hdd-stack"></i></div>
-                            <div class="stat-label">Disk Usage</div>
-                            <div class="stat-value small" id="statDisk">—</div>
-                        </div>
-                        <div class="circle-wrap">
-                            <svg viewBox="0 0 36 36">
-                                <path class="circle-bg" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
-                                <path class="circle-progress" id="diskRing" stroke="#06b6d4" stroke-dasharray="0, 100" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
-                            </svg>
-                        </div>
-                    </div>
+                <div class="info-banner">
+                    <div class="info-item"><span>Public IP:</span> <strong id="statIP">—</strong></div>
+                    <div class="info-item"><span>VPN Transfer:</span> <strong id="statTransfer">—</strong></div>
                 </div>
             </div>
         </div>
@@ -611,14 +515,13 @@
         document.getElementById('tab-' + tab).classList.add('active');
         document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
         document.getElementById('pageTitle').textContent =
-            {dashboard:'Dashboard', stats:'System Telemetry', inbounds:'Inbounds', speedtest:'Speed Test', logs:'Xray Logs', ssl:'SSL Certificates', settings:'Settings'}[tab];
+            {dashboard:'Dashboard', inbounds:'Inbounds', speedtest:'Speed Test', logs:'Xray Logs', ssl:'SSL Certificates', settings:'Settings'}[tab];
         currentTab = tab;
 
         // Stop log auto-refresh when leaving logs tab
         if (logAutoRefreshTimer) { clearInterval(logAutoRefreshTimer); logAutoRefreshTimer = null; }
 
-        if (tab === 'dashboard') { loadStats(); loadVPNStatus(); }
-        if (tab === 'stats') { initChart(); loadStats(); setTimeout(() => { if (trafficChart) trafficChart.resize(); }, 50); }
+        if (tab === 'dashboard') { initChart(); loadStats(); loadVPNStatus(); }
         if (tab === 'inbounds') loadInbounds();
         if (tab === 'settings') { loadSettings(); loadSystemInfo(); loadServiceStatus(); }
         if (tab === 'ssl') loadSSLInfo();
@@ -740,39 +643,28 @@
         if (!data) return;
         document.getElementById('statUptime').textContent = data.uptime || '—';
         
-        const cpuPct = data.cpu_pct || 0;
-        document.getElementById('statCpu').textContent = cpuPct + '%';
+        const cpuPct = Number(data.cpu_pct) || 0;
+        document.getElementById('statCpuPct').textContent = cpuPct + '%';
         const cpuRing = document.getElementById('cpuRing');
-        if(cpuRing) cpuRing.setAttribute('stroke-dasharray', `${cpuPct}, 100`);
+        if(cpuRing) cpuRing.setAttribute('stroke-dasharray', `${(cpuPct/100)*125.66}, 125.66`);
+        if(cpuRing) cpuRing.setAttribute('stroke', cpuPct > 80 ? '#ef4444' : cpuPct > 50 ? '#f59e0b' : '#10b981');
 
-        const memPct = data.mem_pct || 0;
-        document.getElementById('statMem').textContent = memPct ? memPct + '%' : '—';
+        const memPct = Number(data.mem_pct) || 0;
+        document.getElementById('statMemPct').textContent = memPct + '%';
         const memRing = document.getElementById('memRing');
-        if(memRing) memRing.setAttribute('stroke-dasharray', `${memPct}, 100`);
+        if(memRing) memRing.setAttribute('stroke-dasharray', `${(memPct/100)*125.66}, 125.66`);
+        if(memRing) memRing.setAttribute('stroke', memPct > 80 ? '#ef4444' : memPct > 50 ? '#f59e0b' : '#3b82f6');
+        
+        if (data.mem_used && data.mem_total) {
+            document.getElementById('statMemDetail').textContent = `${(data.mem_used/(1024*1024)).toFixed(2)} GB / ${(data.mem_total/(1024*1024)).toFixed(2)} GB`;
+        }
 
-        const xrayStatus = data.xray_status || '—';
-        const isXrayActive = data.xray_status === 'ACTIVE';
-        let xrayClass = 'stat-value ' + (isXrayActive ? 'text-green' : 'text-red');
-        
-        let xrayEl = document.getElementById('statXray');
-        if(xrayEl) { xrayEl.textContent = xrayStatus; xrayEl.className = xrayClass; }
-        let dashXray = document.getElementById('dashXray');
-        if(dashXray) { dashXray.textContent = xrayStatus; dashXray.className = xrayClass; }
-        
-        let statIP = document.getElementById('statIP');
-        if(statIP) statIP.textContent = data.public_ip || '—';
-        
-        const activeConns = data.active_connections ?? '—';
-        let statConns = document.getElementById('statConns');
-        if(statConns) statConns.textContent = activeConns;
-        let dashConns = document.getElementById('dashConns');
-        if(dashConns) dashConns.textContent = activeConns;
-
-        const wgTransfer = data.wg_transfer || '—';
-        let statTransfer = document.getElementById('statTransfer');
-        if(statTransfer) statTransfer.textContent = wgTransfer;
-        let dashTransfer = document.getElementById('dashTransfer');
-        if(dashTransfer) dashTransfer.textContent = wgTransfer;
+        xrayEl = document.getElementById('statXray');
+        xrayEl.textContent = data.xray_status || '—';
+        xrayEl.className = 'badge ' + (data.xray_status === 'ACTIVE' ? 'badge-green' : 'badge-red');
+        document.getElementById('statIP').textContent = data.public_ip || '—';
+        document.getElementById('statConns').textContent = data.active_connections ?? '—';
+        document.getElementById('statTransfer').textContent = data.wg_transfer || '—';
         
         // Traffic Chart Logic
         if (data.net_rx !== undefined && data.net_tx !== undefined) {
@@ -1207,9 +1099,12 @@
         `;
         // Also update dashboard disk card
         if (i.disk_pct) {
-            document.getElementById('statDisk').textContent = `${i.disk_used} / ${i.disk_total}`;
-            const pct = parseInt(i.disk_pct);
-            document.getElementById('diskBar').style.width = pct + '%';
+            const pct = parseFloat(i.disk_pct) || 0;
+            document.getElementById('statDiskPct').textContent = pct + '%';
+            const diskRing = document.getElementById('diskRing');
+            if(diskRing) diskRing.setAttribute('stroke-dasharray', `${(pct/100)*125.66}, 125.66`);
+            if(diskRing) diskRing.setAttribute('stroke', pct > 80 ? '#ef4444' : pct > 60 ? '#f59e0b' : '#06b6d4');
+            document.getElementById('statDiskDetail').textContent = `${i.disk_used} / ${i.disk_total}`;
             document.getElementById('diskBar').style.background = pct > 80 ? '#ef4444' : pct > 60 ? '#f59e0b' : '#06b6d4';
         }
     }

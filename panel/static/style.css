@@ -311,61 +311,61 @@ h4 i { color: var(--accent-light); }
     overflow: hidden;
 }
 
-/* ─── Stats Grid ───────────────────────────────────────────────── */
-.stats-grid {
+/* ─── Gauges Container ─────────────────────────────────────────── */
+.gauges-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
-    gap: 0.85rem;
-    margin-top: 0.85rem;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1rem;
+    margin-bottom: 1.25rem;
 }
 
-.stat-card {
+.gauge-card {
     background: var(--bg-card);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
-    padding: 1.15rem;
+    padding: 2.5rem 1.5rem;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
     transition: var(--transition);
+}
+.gauge-card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-glow); }
+.gauge-wrap {
     position: relative;
-    overflow: hidden;
+    width: 220px; height: 120px;
+    margin-bottom: 0.5rem;
 }
-.stat-card::before {
-    content: '';
+.gauge-wrap svg { width: 100%; height: 100%; overflow: visible; }
+.gauge-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-linecap: round; }
+.gauge-progress { fill: none; stroke-linecap: round; transition: stroke-dasharray 1s ease-out; }
+.gauge-value {
     position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent), var(--cyan), transparent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    bottom: -10px; left: 0; right: 0;
+    text-align: center;
+    font-size: 1.8rem; font-weight: 700;
+    font-family: var(--font-heading);
 }
-.stat-card:hover::before { opacity: 1; }
-.stat-card:hover { border-color: var(--border-hover); transform: translateY(-2px); box-shadow: var(--shadow-glow); }
+.gauge-label { font-size: 1rem; font-weight: 600; color: var(--text-color); margin-top: 15px; }
+.gauge-sub { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
 
-.stat-icon {
-    width: 40px; height: 40px;
-    border-radius: 11px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.15rem;
-    margin-bottom: 0.75rem;
+/* ─── Info Banners ─────────────────────────────────────────────── */
+.info-rows { display: flex; flex-direction: column; gap: 0.85rem; margin-top: 1.25rem; }
+.info-banner {
+    background: var(--bg-card);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
 }
-.stat-icon.blue { background: rgba(59,130,246,0.12); color: var(--blue); }
-.stat-icon.purple { background: rgba(139,92,246,0.12); color: var(--purple); }
-.stat-icon.teal { background: rgba(20,184,166,0.12); color: var(--teal); }
-.stat-icon.green { background: rgba(16,185,129,0.12); color: var(--green); }
-.stat-icon.orange { background: rgba(245,158,11,0.12); color: var(--orange); }
-.stat-icon.pink { background: rgba(236,72,153,0.12); color: var(--pink); }
-.stat-icon.gold { background: rgba(234,179,8,0.12); color: var(--gold); }
-.stat-icon.cyan { background: rgba(6,182,212,0.12); color: var(--cyan); }
-
-.stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
-.stat-value { font-size: 1.45rem; font-weight: 700; margin-top: 0.2rem; letter-spacing: -0.5px; }
-.stat-value.small { font-size: 0.95rem; font-weight: 600; word-break: break-all; }
-
-.stat-bar { height: 4px; background: rgba(255,255,255,0.06); border-radius: 3px; margin-top: 0.6rem; overflow: hidden; }
-.stat-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--cyan)); transition: width 1s ease; }
+.info-item { display: flex; align-items: center; gap: 0.65rem; font-size: 0.95rem; }
+.info-item span { color: var(--text-muted); font-weight: 500; }
+.info-item strong { color: var(--text-color); font-weight: 600; }
+.badge { padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.1); font-size: 0.85rem; letter-spacing: 0.5px; }
+.badge-green { background: rgba(16,185,129,0.15); color: var(--green); }
+.badge-blue { background: rgba(59,130,246,0.15); color: var(--blue); }
+.badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
 
 /* ─── VPN Control Card ─────────────────────────────────────────── */
 .vpn-control-card {
