@@ -1,39 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
 /* ─── Root & Variables ──────────────────────────────────────────── */
 :root {
-    --bg-primary: #060a14;
-    --bg-secondary: #0c1220;
-    --bg-card: rgba(14, 20, 36, 0.65);
-    --bg-card-hover: rgba(20, 30, 55, 0.85);
-    --bg-glass: rgba(16, 24, 48, 0.45);
-    --border-color: rgba(99, 102, 241, 0.12);
-    --border-hover: rgba(124, 58, 237, 0.4);
-    --border-glow: rgba(124, 58, 237, 0.6);
-    --text-primary: #f1f5f9;
-    --text-secondary: #94a3b8;
+    --bg-primary: #020617;
+    --bg-secondary: #0f172a;
+    --bg-card: rgba(15, 23, 42, 0.4);
+    --bg-card-hover: rgba(30, 41, 59, 0.55);
+    --bg-glass: rgba(15, 23, 42, 0.6);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(99, 102, 241, 0.5);
+    --border-glow: rgba(56, 189, 248, 0.6);
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
     --text-muted: #64748b;
-    --accent: #7c3aed;
-    --accent-light: #a78bfa;
-    --accent-glow: rgba(124, 58, 237, 0.25);
+    
+    /* Vibrant modern gradients */
+    --accent: #6366f1;
+    --accent-light: #38bdf8;
+    --accent-glow: rgba(99, 102, 241, 0.3);
     --green: #10b981;
-    --green-glow: rgba(16, 185, 129, 0.25);
+    --green-glow: rgba(16, 185, 129, 0.3);
     --red: #ef4444;
-    --red-glow: rgba(239, 68, 68, 0.25);
+    --red-glow: rgba(239, 68, 68, 0.3);
     --blue: #3b82f6;
     --cyan: #06b6d4;
     --orange: #f59e0b;
     --pink: #ec4899;
-    --gold: #eab308;
+    --gold: #f59e0b;
     --teal: #14b8a6;
     --purple: #8b5cf6;
+    
     --sidebar-width: 250px;
-    --radius: 16px;
-    --radius-sm: 10px;
-    --radius-xs: 6px;
+    --radius: 20px;
+    --radius-sm: 14px;
+    --radius-xs: 8px;
     --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    --shadow: 0 8px 32px rgba(0,0,0,0.45);
-    --shadow-lg: 0 20px 60px rgba(0,0,0,0.55);
-    --shadow-glow: 0 0 40px rgba(124, 58, 237, 0.15);
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --font-heading: 'Outfit', -apple-system, sans-serif;
+    --shadow: 0 10px 30px rgba(0,0,0,0.5);
+    --shadow-lg: 0 25px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+    --shadow-glow: 0 0 35px rgba(99, 102, 241, 0.2);
+    --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     --transition-fast: all 0.15s ease;
 }
 
@@ -46,10 +52,21 @@ body {
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
-    background-image:
-        radial-gradient(ellipse at 15% 0%, rgba(124,58,237,0.12) 0%, transparent 55%),
-        radial-gradient(ellipse at 85% 100%, rgba(6,182,212,0.08) 0%, transparent 55%),
-        radial-gradient(ellipse at 50% 50%, rgba(16,185,129,0.03) 0%, transparent 70%);
+    position: relative;
+}
+/* Enhanced Animated Background Blur */
+body::before {
+    content: ''; position: fixed; top: -20%; left: -10%; width: 50vw; height: 50vw;
+    background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 60%);
+    z-index: -1; pointer-events: none; filter: blur(80px);
+}
+body::after {
+    content: ''; position: fixed; bottom: -20%; right: -10%; width: 50vw; height: 50vw;
+    background: radial-gradient(circle, rgba(14,165,233,0.06) 0%, transparent 60%);
+    z-index: -1; pointer-events: none; filter: blur(80px);
+}
+h1, h2, h3, h4, h5, h6, .page-title, .logo-text, .vpn-title, .stat-value, .gauge-value, .speed-value {
+    font-family: var(--font-heading);
 }
 
 /* ─── Scrollbar ────────────────────────────────────────────────── */
@@ -280,6 +297,19 @@ h4 i { color: var(--accent-light); }
 .card:hover { border-color: var(--border-hover); box-shadow: var(--shadow-glow); }
 .card-body { padding: 1.25rem; }
 .card-desc { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.5; }
+
+/* ─── Chart Card ───────────────────────────────────────────────── */
+.chart-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-top: 0.85rem;
+    height: 320px;
+    position: relative;
+    overflow: hidden;
+}
 
 /* ─── Stats Grid ───────────────────────────────────────────────── */
 .stats-grid {

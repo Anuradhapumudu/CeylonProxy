@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CeylonProxy</title>
     <meta name="description" content="CeylonProxy Management Panel — Manage VLESS and Trojan proxies with ease">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -78,6 +79,10 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
+            </div>
+
+            <div class="chart-card">
+                <canvas id="trafficChart"></canvas>
             </div>
 
             <div class="stats-grid" id="statsGrid">
@@ -512,7 +517,7 @@
         // Stop log auto-refresh when leaving logs tab
         if (logAutoRefreshTimer) { clearInterval(logAutoRefreshTimer); logAutoRefreshTimer = null; }
 
-        if (tab === 'dashboard') { loadStats(); loadVPNStatus(); }
+        if (tab === 'dashboard') { initChart(); loadStats(); loadVPNStatus(); }
         if (tab === 'inbounds') loadInbounds();
         if (tab === 'settings') { loadSettings(); loadSystemInfo(); loadServiceStatus(); }
         if (tab === 'ssl') loadSSLInfo();
@@ -602,6 +607,33 @@
     }
 
     // ─── Dashboard ──────────────────────────────────────────────────
+    let trafficChart;
+    const maxDataPoints = 30;
+    const rxData = []; const txData = []; const labels = [];
+    let lastRx = 0; let lastTx = 0; let lastTime = 0;
+
+    function initChart() {
+        if(trafficChart) return;
+        const ctx = document.getElementById('trafficChart');
+        if(!ctx) return;
+        trafficChart = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: { labels: labels, datasets: [
+                { label: 'Download (Mbps)', borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, tension: 0.4, fill: true, pointRadius: 0, data: rxData },
+                { label: 'Upload (Mbps)', borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, tension: 0.4, fill: true, pointRadius: 0, data: txData }
+            ]},
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#cbd5e1', font: {family: "'Outfit', sans-serif"} } } },
+                scales: {
+                    x: { display: false },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { dash: [4, 4] }, ticks: { color: '#94a3b8' }, beginAtZero: true }
+                },
+                interaction: { mode: 'index', intersect: false }
+            }
+        });
+    }
+
     async function loadStats() {
         const data = await api('/api/stats');
         if (!data) return;
@@ -619,6 +651,24 @@
         document.getElementById('statIP').textContent = data.public_ip || '—';
         document.getElementById('statConns').textContent = data.active_connections ?? '—';
         document.getElementById('statTransfer').textContent = data.wg_transfer || '—';
+        
+        // Traffic Chart Logic
+        if (data.net_rx !== undefined && data.net_tx !== undefined) {
+            const now = Date.now();
+            if (lastTime > 0) {
+                const timeDiff = (now - lastTime) / 1000;
+                const rxSpeed = ((data.net_rx - lastRx) * 8 / 1000000) / timeDiff; // Mbps
+                const txSpeed = ((data.net_tx - lastTx) * 8 / 1000000) / timeDiff; // Mbps
+                
+                labels.push(new Date().toLocaleTimeString());
+                rxData.push(Math.max(0, rxSpeed).toFixed(2));
+                txData.push(Math.max(0, txSpeed).toFixed(2));
+                
+                if (labels.length > maxDataPoints) { labels.shift(); rxData.shift(); txData.shift(); }
+                if (trafficChart) trafficChart.update();
+            }
+            lastRx = data.net_rx; lastTx = data.net_tx; lastTime = now;
+        }
     }
 
     // ─── Quick Create ───────────────────────────────────────────────

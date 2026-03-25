@@ -538,6 +538,16 @@ def get_system_stats():
             stats['mem_used'] = 0
             stats['mem_pct'] = 0
 
+        # Network bytes (eth0)
+        try:
+            with open('/sys/class/net/eth0/statistics/rx_bytes') as f:
+                stats['net_rx'] = int(f.read().strip())
+            with open('/sys/class/net/eth0/statistics/tx_bytes') as f:
+                stats['net_tx'] = int(f.read().strip())
+        except Exception:
+            stats['net_rx'] = 0
+            stats['net_tx'] = 0
+
         # WireGuard status
         wg = subprocess.run(['wg', 'show', 'wg0'], capture_output=True, text=True, timeout=2)
         stats['wg_status'] = 'UP' if wg.returncode == 0 else 'DOWN'
