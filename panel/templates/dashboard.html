@@ -392,42 +392,42 @@
         </div>
         <div class="modal-body">
             <input type="hidden" id="editInboundId">
-            <div class="form-group">
-                <label><i class="bi bi-tag"></i> Remark / Name</label>
-                <input type="text" id="ibRemark" placeholder="e.g. VLESS-Main">
+            <div class="form-group floating-group">
+                <input type="text" id="ibRemark" class="floating-input" placeholder=" ">
+                <label class="floating-label"><i class="bi bi-tag"></i> Remark / Name</label>
             </div>
             <div class="form-row">
                 <div class="form-group flex-1">
-                    <label><i class="bi bi-diagram-2"></i> Protocol</label>
-                    <select id="ibProtocol"><option value="vless">VLESS</option><option value="trojan">Trojan</option></select>
+                    <label class="static-label"><i class="bi bi-diagram-2"></i> Protocol</label>
+                    <select id="ibProtocol" class="select-input"><option value="vless">VLESS</option><option value="trojan">Trojan</option></select>
                 </div>
-                <div class="form-group flex-1">
-                    <label><i class="bi bi-ethernet"></i> Port</label>
-                    <input type="number" id="ibPort" value="443">
+                <div class="form-group flex-1 floating-group">
+                    <input type="number" id="ibPort" class="floating-input" placeholder=" " value="443">
+                    <label class="floating-label"><i class="bi bi-ethernet"></i> Port</label>
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group flex-1">
-                    <label><i class="bi bi-hdd-network"></i> Transport</label>
-                    <select id="ibTransport"><option value="tcp" selected>TCP (Fastest)</option><option value="ws">WebSocket</option></select>
+                    <label class="static-label"><i class="bi bi-hdd-network"></i> Transport</label>
+                    <select id="ibTransport" class="select-input"><option value="tcp" selected>TCP (Fastest)</option><option value="ws">WebSocket</option></select>
                 </div>
-                <div class="form-group flex-1">
-                    <label><i class="bi bi-globe"></i> SNI</label>
-                    <input type="text" id="ibSNI" placeholder="teams.microsoft.com">
+                <div class="form-group flex-1 floating-group">
+                    <input type="text" id="ibSNI" class="floating-input" placeholder=" ">
+                    <label class="floating-label"><i class="bi bi-globe"></i> SNI (Optional)</label>
                 </div>
             </div>
-            <div class="form-group">
-                <label><i class="bi bi-file-earmark-lock"></i> Certificate Path (blank = use global)</label>
-                <input type="text" id="ibCert" placeholder="Auto-filled from SSL settings">
+            <div class="form-group floating-group">
+                <input type="text" id="ibCert" class="floating-input" placeholder=" ">
+                <label class="floating-label"><i class="bi bi-file-earmark-lock"></i> Certificate Path (blank = global)</label>
             </div>
-            <div class="form-group">
-                <label><i class="bi bi-key"></i> Key Path (blank = use global)</label>
-                <input type="text" id="ibKey" placeholder="Auto-filled from SSL settings">
+            <div class="form-group floating-group">
+                <input type="text" id="ibKey" class="floating-input" placeholder=" ">
+                <label class="floating-label"><i class="bi bi-key"></i> Key Path (blank = global)</label>
             </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeAllModals()">Cancel</button>
-            <button class="btn btn-primary" onclick="saveInbound()"><i class="bi bi-check-lg"></i> Save</button>
+            <button class="btn btn-primary" onclick="saveInbound()"><i class="bi bi-check-lg"></i> Save Inbound</button>
         </div>
     </div>
 
@@ -439,24 +439,24 @@
         </div>
         <div class="modal-body">
             <input type="hidden" id="clientInboundId">
-            <div class="form-group">
-                <label><i class="bi bi-envelope"></i> Email / Remark</label>
-                <input type="text" id="clEmail" placeholder="user@email.com">
+            <div class="form-group floating-group">
+                <input type="text" id="clEmail" class="floating-input" placeholder=" ">
+                <label class="floating-label"><i class="bi bi-envelope"></i> Email / Remark</label>
             </div>
             <div class="form-row">
-                <div class="form-group flex-1">
-                    <label><i class="bi bi-speedometer"></i> Traffic (GB, 0=unlimited)</label>
-                    <input type="number" id="clGB" value="0">
+                <div class="form-group flex-1 floating-group">
+                    <input type="number" id="clGB" class="floating-input" placeholder=" " value="0">
+                    <label class="floating-label"><i class="bi bi-speedometer"></i> Traffic (GB, 0=unlimited)</label>
                 </div>
-                <div class="form-group flex-1">
-                    <label><i class="bi bi-calendar-event"></i> Expiry (days, 0=never)</label>
-                    <input type="number" id="clExpiry" value="0">
+                <div class="form-group flex-1 floating-group">
+                    <input type="number" id="clExpiry" class="floating-input" placeholder=" " value="0">
+                    <label class="floating-label"><i class="bi bi-calendar-x"></i> Expiry (Days, 0=unlimited)</label>
                 </div>
             </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeAllModals()">Cancel</button>
-            <button class="btn btn-primary" onclick="saveClient()"><i class="bi bi-person-plus"></i> Add Client</button>
+            <button class="btn btn-primary" onclick="saveClient()"><i class="bi bi-check-lg"></i> Add Client</button>
         </div>
     </div>
 

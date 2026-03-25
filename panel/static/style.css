@@ -797,11 +797,13 @@ h4 i { color: var(--accent-light); }
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.4rem;
     min-width: 160px;
+    position: relative;
 }
 .form-group.flex-1 { flex: 1; }
-.form-group label {
+
+.static-label {
     font-size: 0.78rem;
     color: var(--text-secondary);
     font-weight: 600;
@@ -809,7 +811,41 @@ h4 i { color: var(--accent-light); }
     align-items: center;
     gap: 0.35rem;
 }
-.form-group label i { font-size: 0.85rem; color: var(--accent-light); }
+.static-label i { font-size: 0.85rem; color: var(--accent-light); }
+
+.floating-group { position: relative; margin-top: 0.4rem; }
+.floating-label {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    pointer-events: none;
+    transition: var(--transition-fast);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.floating-label i { color: var(--accent-light); }
+
+.floating-input {
+    background: rgba(15,23,42,0.4) !important;
+    padding: 1.15rem 0.85rem 0.45rem !important;
+}
+
+.floating-input:focus ~ .floating-label,
+.floating-input:not(:placeholder-shown) ~ .floating-label {
+    top: 0;
+    transform: translateY(-50%) scale(0.85);
+    left: 0.75rem;
+    padding: 0 4px;
+    background: var(--bg-secondary);
+    color: var(--accent);
+    border-radius: 4px;
+}
 
 input[type="text"], input[type="number"], input[type="password"], select, textarea {
     background: var(--bg-glass);
