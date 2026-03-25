@@ -618,20 +618,30 @@
 
     function initChart() {
         if(trafficChart) return;
-        const ctx = document.getElementById('trafficChart');
-        if(!ctx) return;
-        trafficChart = new Chart(ctx.getContext('2d'), {
+        const canvas = document.getElementById('trafficChart');
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        
+        const gradRx = ctx.createLinearGradient(0, 0, 0, 300);
+        gradRx.addColorStop(0, 'rgba(16,185,129,0.4)');
+        gradRx.addColorStop(1, 'rgba(16,185,129,0.0)');
+        
+        const gradTx = ctx.createLinearGradient(0, 0, 0, 300);
+        gradTx.addColorStop(0, 'rgba(59,130,246,0.4)');
+        gradTx.addColorStop(1, 'rgba(59,130,246,0.0)');
+
+        trafficChart = new Chart(ctx, {
             type: 'line',
             data: { labels: labels, datasets: [
-                { label: 'Download (Mbps)', borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, tension: 0.4, fill: true, pointRadius: 0, data: rxData },
-                { label: 'Upload (Mbps)', borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, tension: 0.4, fill: true, pointRadius: 0, data: txData }
+                { label: 'Download (Mbps)', borderColor: '#10b981', backgroundColor: gradRx, borderWidth: 3, tension: 0.45, fill: true, pointRadius: 0, data: rxData },
+                { label: 'Upload (Mbps)', borderColor: '#3b82f6', backgroundColor: gradTx, borderWidth: 3, tension: 0.45, fill: true, pointRadius: 0, data: txData }
             ]},
             options: {
                 responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { labels: { color: '#cbd5e1', font: {family: "'Outfit', sans-serif"} } } },
                 scales: {
                     x: { display: false },
-                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { dash: [4, 4] }, ticks: { color: '#94a3b8' }, beginAtZero: true }
+                    y: { grid: { color: 'rgba(255,255,255,0.03)' }, border: { dash: [4, 4] }, ticks: { color: '#64748b' }, beginAtZero: true }
                 },
                 interaction: { mode: 'index', intersect: false }
             }
