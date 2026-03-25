@@ -19,7 +19,7 @@ banner() {
     echo -e "${PURPLE}"
     echo "╔══════════════════════════════════════════╗"
     echo "║        🛡️  CeylonProxy Installer  🛡️      ║"
-    echo "║    Secure VPN Management System v1.0     ║"
+    echo "║    Secure VPN Management System v3.1     ║"
     echo "╚══════════════════════════════════════════╝"
     echo -e "${NC}"
 }
