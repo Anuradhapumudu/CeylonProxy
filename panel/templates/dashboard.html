@@ -87,47 +87,94 @@
 
             <div class="stats-grid" id="statsGrid">
                 <div class="stat-card">
-                    <div class="stat-icon blue"><i class="bi bi-clock-history"></i></div>
-                    <div class="stat-label">Server Uptime</div>
-                    <div class="stat-value" id="statUptime">—</div>
+                    <div class="stat-header-row">
+                        <div>
+                            <div class="stat-icon blue"><i class="bi bi-clock-history"></i></div>
+                            <div class="stat-label">Server Uptime</div>
+                            <div class="stat-value" id="statUptime">—</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon purple"><i class="bi bi-cpu"></i></div>
-                    <div class="stat-label">CPU Usage</div>
-                    <div class="stat-value" id="statCpu">—</div>
-                    <div class="stat-bar"><div class="stat-bar-fill" id="cpuBar"></div></div>
+                    <div class="stat-header-row">
+                        <div>
+                            <div class="stat-icon purple"><i class="bi bi-cpu"></i></div>
+                            <div class="stat-label">CPU Usage</div>
+                            <div class="stat-value" id="statCpu">—</div>
+                        </div>
+                        <div class="circle-wrap">
+                            <svg viewBox="0 0 36 36">
+                                <path class="circle-bg" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
+                                <path class="circle-progress" id="cpuRing" stroke="#8b5cf6" stroke-dasharray="0, 100" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon teal"><i class="bi bi-memory"></i></div>
-                    <div class="stat-label">Memory Usage</div>
-                    <div class="stat-value" id="statMem">—</div>
-                    <div class="stat-bar"><div class="stat-bar-fill" id="memBar"></div></div>
+                    <div class="stat-header-row">
+                        <div>
+                            <div class="stat-icon teal"><i class="bi bi-memory"></i></div>
+                            <div class="stat-label">Memory Usage</div>
+                            <div class="stat-value" id="statMem">—</div>
+                        </div>
+                        <div class="circle-wrap">
+                            <svg viewBox="0 0 36 36">
+                                <path class="circle-bg" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
+                                <path class="circle-progress" id="memRing" stroke="#10b981" stroke-dasharray="0, 100" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon green"><i class="bi bi-lightning-charge-fill"></i></div>
-                    <div class="stat-label">Xray Status</div>
-                    <div class="stat-value" id="statXray">—</div>
+                    <div class="stat-header-row">
+                        <div>
+                            <div class="stat-icon green"><i class="bi bi-lightning-charge-fill"></i></div>
+                            <div class="stat-label">Xray Status</div>
+                            <div class="stat-value" id="statXray">—</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card span-2">
+                    <div class="stat-header-row">
+                        <div>
+                            <div class="stat-icon gold"><i class="bi bi-arrow-left-right"></i></div>
+                            <div class="stat-label">VPN Transfer</div>
+                            <div class="stat-value small" id="statTransfer">—</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon orange"><i class="bi bi-globe2"></i></div>
-                    <div class="stat-label">Public IP</div>
-                    <div class="stat-value small" id="statIP">—</div>
+                    <div class="stat-header-row">
+                        <div>
+                            <div class="stat-icon orange"><i class="bi bi-globe2"></i></div>
+                            <div class="stat-label">Public IP</div>
+                            <div class="stat-value small" id="statIP">—</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon pink"><i class="bi bi-people-fill"></i></div>
-                    <div class="stat-label">Active Connections</div>
-                    <div class="stat-value" id="statConns">—</div>
+                    <div class="stat-header-row">
+                        <div>
+                            <div class="stat-icon pink"><i class="bi bi-people-fill"></i></div>
+                            <div class="stat-label">Active Connections</div>
+                            <div class="stat-value" id="statConns">—</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon gold"><i class="bi bi-arrow-left-right"></i></div>
-                    <div class="stat-label">VPN Transfer</div>
-                    <div class="stat-value small" id="statTransfer">—</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon cyan"><i class="bi bi-hdd-stack"></i></div>
-                    <div class="stat-label">Disk Usage</div>
-                    <div class="stat-value small" id="statDisk">—</div>
-                    <div class="stat-bar"><div class="stat-bar-fill" id="diskBar"></div></div>
+                <div class="stat-card span-2">
+                    <div class="stat-header-row">
+                        <div>
+                            <div class="stat-icon cyan"><i class="bi bi-hdd-stack"></i></div>
+                            <div class="stat-label">Disk Usage</div>
+                            <div class="stat-value small" id="statDisk">—</div>
+                        </div>
+                        <div class="circle-wrap">
+                            <svg viewBox="0 0 36 36">
+                                <path class="circle-bg" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
+                                <path class="circle-progress" id="diskRing" stroke="#06b6d4" stroke-dasharray="0, 100" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -638,14 +685,18 @@
         const data = await api('/api/stats');
         if (!data) return;
         document.getElementById('statUptime').textContent = data.uptime || '—';
+        
         const cpuPct = data.cpu_pct || 0;
         document.getElementById('statCpu').textContent = cpuPct + '%';
-        document.getElementById('cpuBar').style.width = cpuPct + '%';
-        document.getElementById('cpuBar').style.background = cpuPct > 80 ? '#ef4444' : cpuPct > 50 ? '#f59e0b' : '#8b5cf6';
-        document.getElementById('statMem').textContent = data.mem_pct ? data.mem_pct + '%' : '—';
-        document.getElementById('memBar').style.width = (data.mem_pct || 0) + '%';
-        document.getElementById('memBar').style.background = data.mem_pct > 80 ? '#ef4444' : data.mem_pct > 50 ? '#f59e0b' : '#10b981';
-        const xrayEl = document.getElementById('statXray');
+        const cpuRing = document.getElementById('cpuRing');
+        if(cpuRing) cpuRing.setAttribute('stroke-dasharray', `${cpuPct}, 100`);
+
+        const memPct = data.mem_pct || 0;
+        document.getElementById('statMem').textContent = memPct ? memPct + '%' : '—';
+        const memRing = document.getElementById('memRing');
+        if(memRing) memRing.setAttribute('stroke-dasharray', `${memPct}, 100`);
+
+        xrayEl = document.getElementById('statXray');
         xrayEl.textContent = data.xray_status || '—';
         xrayEl.className = 'stat-value ' + (data.xray_status === 'ACTIVE' ? 'text-green' : 'text-red');
         document.getElementById('statIP').textContent = data.public_ip || '—';
