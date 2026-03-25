@@ -24,6 +24,9 @@
             <a class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
+            <a class="nav-item" data-tab="stats" onclick="switchTab('stats')">
+                <i class="bi bi-activity"></i> System Stats
+            </a>
             <a class="nav-item" data-tab="inbounds" onclick="switchTab('inbounds')">
                 <i class="bi bi-plug-fill"></i> Inbounds
             </a>
@@ -63,12 +66,17 @@
 
         <!-- Dashboard Tab -->
         <div class="tab-content active" id="tab-dashboard">
+            <div class="dashboard-hero" style="margin-bottom: 2rem;">
+                <h1 style="font-size: 2.2rem; margin-bottom: 0.5rem; font-family: var(--font-heading); background: linear-gradient(90deg, #fff, #94a3b8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Mission Control</h1>
+                <p style="color: var(--text-muted); font-size: 1.05rem;">Manage your active proxies and oversee incoming network connections securely.</p>
+            </div>
+
             <!-- VPN Control Card -->
-            <div class="vpn-control-card loading" id="vpnCard">
+            <div class="vpn-control-card loading" id="vpnCard" style="margin-bottom: 1.5rem;">
                 <div class="vpn-left">
                     <div class="vpn-icon" id="vpnIcon"><i class="bi bi-shield-check"></i></div>
                     <div class="vpn-info">
-                        <div class="vpn-title">WireGuard VPN</div>
+                        <div class="vpn-title">WireGuard VPN Interface</div>
                         <div class="vpn-status" id="vpnStatusText"><i class="bi bi-hourglass-split"></i> Loading status...</div>
                         <div class="vpn-ip" id="vpnIP"></div>
                     </div>
@@ -81,6 +89,43 @@
                 </div>
             </div>
 
+            <div class="stats-grid" id="dashboardGrid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+                <div class="stat-card">
+                    <div class="stat-header-row">
+                        <div>
+                            <div class="stat-icon pink"><i class="bi bi-people-fill"></i></div>
+                            <div class="stat-label">Active Connections</div>
+                            <div class="stat-value" id="dashConns">—</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header-row">
+                        <div>
+                            <div class="stat-icon green"><i class="bi bi-lightning-charge-fill"></i></div>
+                            <div class="stat-label">Xray Status</div>
+                            <div class="stat-value" id="dashXray">—</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card span-2">
+                    <div class="stat-header-row">
+                        <div>
+                            <div class="stat-icon gold"><i class="bi bi-arrow-left-right"></i></div>
+                            <div class="stat-label">VPN Transfer</div>
+                            <div class="stat-value small" id="dashTransfer">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Stats Tab -->
+        <div class="tab-content" id="tab-stats">
+            <div class="tab-header">
+                <h3>System Telemetry</h3>
+            </div>
+            
             <div class="chart-card">
                 <canvas id="trafficChart"></canvas>
             </div>
@@ -128,21 +173,29 @@
                 <div class="stat-card">
                     <div class="stat-header-row">
                         <div>
-                            <div class="stat-icon green"><i class="bi bi-lightning-charge-fill"></i></div>
-                            <div class="stat-label">Xray Status</div>
-                            <div class="stat-value" id="statXray">—</div>
+                            <div class="stat-icon orange"><i class="bi bi-globe2"></i></div>
+                            <div class="stat-label">Public IP</div>
+                            <div class="stat-value small" id="statIP">—</div>
                         </div>
                     </div>
                 </div>
                 <div class="stat-card span-2">
                     <div class="stat-header-row">
                         <div>
-                            <div class="stat-icon gold"><i class="bi bi-arrow-left-right"></i></div>
-                            <div class="stat-label">VPN Transfer</div>
-                            <div class="stat-value small" id="statTransfer">—</div>
+                            <div class="stat-icon cyan"><i class="bi bi-hdd-stack"></i></div>
+                            <div class="stat-label">Disk Usage</div>
+                            <div class="stat-value small" id="statDisk">—</div>
+                        </div>
+                        <div class="circle-wrap">
+                            <svg viewBox="0 0 36 36">
+                                <path class="circle-bg" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
+                                <path class="circle-progress" id="diskRing" stroke="#06b6d4" stroke-dasharray="0, 100" d="M18 2 a 16 16 0 1 1 0 32 a 16 16 0 1 1 0 -32"/>
+                            </svg>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
                 <div class="stat-card">
                     <div class="stat-header-row">
                         <div>
@@ -558,13 +611,14 @@
         document.getElementById('tab-' + tab).classList.add('active');
         document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
         document.getElementById('pageTitle').textContent =
-            {dashboard:'Dashboard', inbounds:'Inbounds', speedtest:'Speed Test', logs:'Xray Logs', ssl:'SSL Certificates', settings:'Settings'}[tab];
+            {dashboard:'Dashboard', stats:'System Telemetry', inbounds:'Inbounds', speedtest:'Speed Test', logs:'Xray Logs', ssl:'SSL Certificates', settings:'Settings'}[tab];
         currentTab = tab;
 
         // Stop log auto-refresh when leaving logs tab
         if (logAutoRefreshTimer) { clearInterval(logAutoRefreshTimer); logAutoRefreshTimer = null; }
 
-        if (tab === 'dashboard') { initChart(); loadStats(); loadVPNStatus(); }
+        if (tab === 'dashboard') { loadStats(); loadVPNStatus(); }
+        if (tab === 'stats') { initChart(); loadStats(); setTimeout(() => { if (trafficChart) trafficChart.resize(); }, 50); }
         if (tab === 'inbounds') loadInbounds();
         if (tab === 'settings') { loadSettings(); loadSystemInfo(); loadServiceStatus(); }
         if (tab === 'ssl') loadSSLInfo();
@@ -696,12 +750,29 @@
         const memRing = document.getElementById('memRing');
         if(memRing) memRing.setAttribute('stroke-dasharray', `${memPct}, 100`);
 
-        xrayEl = document.getElementById('statXray');
-        xrayEl.textContent = data.xray_status || '—';
-        xrayEl.className = 'stat-value ' + (data.xray_status === 'ACTIVE' ? 'text-green' : 'text-red');
-        document.getElementById('statIP').textContent = data.public_ip || '—';
-        document.getElementById('statConns').textContent = data.active_connections ?? '—';
-        document.getElementById('statTransfer').textContent = data.wg_transfer || '—';
+        const xrayStatus = data.xray_status || '—';
+        const isXrayActive = data.xray_status === 'ACTIVE';
+        let xrayClass = 'stat-value ' + (isXrayActive ? 'text-green' : 'text-red');
+        
+        let xrayEl = document.getElementById('statXray');
+        if(xrayEl) { xrayEl.textContent = xrayStatus; xrayEl.className = xrayClass; }
+        let dashXray = document.getElementById('dashXray');
+        if(dashXray) { dashXray.textContent = xrayStatus; dashXray.className = xrayClass; }
+        
+        let statIP = document.getElementById('statIP');
+        if(statIP) statIP.textContent = data.public_ip || '—';
+        
+        const activeConns = data.active_connections ?? '—';
+        let statConns = document.getElementById('statConns');
+        if(statConns) statConns.textContent = activeConns;
+        let dashConns = document.getElementById('dashConns');
+        if(dashConns) dashConns.textContent = activeConns;
+
+        const wgTransfer = data.wg_transfer || '—';
+        let statTransfer = document.getElementById('statTransfer');
+        if(statTransfer) statTransfer.textContent = wgTransfer;
+        let dashTransfer = document.getElementById('dashTransfer');
+        if(dashTransfer) dashTransfer.textContent = wgTransfer;
         
         // Traffic Chart Logic
         if (data.net_rx !== undefined && data.net_tx !== undefined) {
