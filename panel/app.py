@@ -102,6 +102,7 @@ def init_db():
             key_path TEXT DEFAULT '',
             settings_json TEXT DEFAULT '{}',
             stream_json TEXT DEFAULT '{}',
+            transport TEXT DEFAULT 'tcp',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -122,6 +123,12 @@ def init_db():
             FOREIGN KEY (inbound_id) REFERENCES inbounds(id) ON DELETE CASCADE
         );
     ''')
+
+    # Add transport column if not exists for legacy databases
+    try:
+        db.execute("ALTER TABLE inbounds ADD COLUMN transport TEXT DEFAULT 'tcp'")
+    except sqlite3.OperationalError:
+        pass
 
     # Create default admin if not exists
     admin = db.execute("SELECT id FROM users WHERE username='admin'").fetchone()
