@@ -234,10 +234,10 @@ PreDown = iptables -t mangle -D OUTPUT -m connmark --mark 123 -j MARK --set-mark
         chmod 600 /etc/wireguard/wg0.conf
         log "WireGuard config generated"
 
-        # Start WireGuard
+        # Start WireGuard via systemd (so service status is tracked correctly)
         wg-quick down wg0 2>/dev/null || true
-        wg-quick up wg0 2>/dev/null || true
         systemctl enable wg-quick@wg0 2>/dev/null || true
+        systemctl start wg-quick@wg0 2>/dev/null || true
         log "WireGuard VPN started"
     else
         warn "Could not decode conf.txt — configure WireGuard manually"
