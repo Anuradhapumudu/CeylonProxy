@@ -202,6 +202,7 @@ def generate_xray_config():
     db = get_db()
     inbounds = db.execute("SELECT * FROM inbounds WHERE enable=1").fetchall()
     dns_servers = get_setting('xray_dns', '1.1.1.1,8.8.8.8').split(',')
+    server_domain = get_setting('panel_domain') or get_server_ip()
 
     config = {
         "log": {
@@ -430,7 +431,7 @@ def generate_share_link(inbound, client):
     """Generate VLESS or Trojan share link."""
     server_ip = get_setting('panel_domain') or get_server_ip()
     port = inbound['port']
-    sni = inbound['sni'] or 'teams.microsoft.com'
+    sni = inbound['sni'] or server_ip
 
     transport = inbound.get('transport', 'tcp')
     if transport == 'ws':
