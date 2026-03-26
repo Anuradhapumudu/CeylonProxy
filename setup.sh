@@ -18,8 +18,8 @@ NC='\033[0m'
 banner() {
     echo -e "${PURPLE}"
     echo "╔══════════════════════════════════════════╗"
-    echo "║        🛡️  CeylonProxy Setup  🛡️        ║"
-    echo "║    Secure VPN Management System v1.0     ║"
+    echo "║        🛡️  CeylonProxy Setup  🛡️          ║"
+    echo "║    Secure VPN Management System v3.1     ║"
     echo "╚══════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -218,16 +218,13 @@ if [[ -f "$CONF_FILE" ]]; then
         DECODED="$(echo "$DECODED" | sed "/^MTU/a DNS = 162.252.172.57, 149.154.159.92")"
         DECODED="$(echo "$DECODED" | sed "/^AllowedIPs/a PersistentKeepalive = 25")"
 
-        # Add PostUp/PreDown for response routing using CONNMARK
+        # Split-routing: only Xray traffic (fwmark 2) goes through WG.
+        # SSH, panel, and all other traffic stays on direct eth0.
         DECODED="$(echo "$DECODED" | sed "/^DNS/a\\
-PostUp = ip route add default via $GATEWAY dev $IFACE onlink table 123\\
-PostUp = ip rule add fwmark 123 table 123\\
-PostUp = iptables -t mangle -A PREROUTING -i $IFACE -m conntrack --ctstate NEW -j CONNMARK --set-mark 123\\
-PostUp = iptables -t mangle -A OUTPUT -m connmark --mark 123 -j MARK --set-mark 123\\
-PreDown = ip route del default via $GATEWAY dev $IFACE table 123 || true\\
-PreDown = ip rule del fwmark 123 table 123 || true\\
-PreDown = iptables -t mangle -D PREROUTING -i $IFACE -m conntrack --ctstate NEW -j CONNMARK --set-mark 123 || true\\
-PreDown = iptables -t mangle -D OUTPUT -m connmark --mark 123 -j MARK --set-mark 123 || true")"
+PostUp = ip route add default dev wg0 table 100\\
+PostUp = ip rule add fwmark 2 table 100\\
+PreDown = ip rule del fwmark 2 table 100 || true\\
+PreDown = ip route del default dev wg0 table 100 || true")"
 
         mkdir -p /etc/wireguard
         echo "$DECODED" > /etc/wireguard/wg0.conf

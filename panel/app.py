@@ -259,7 +259,10 @@ def generate_xray_config():
         "settings": {"domainStrategy": "UseIP"}
     }
     if wg_ip:
-        direct_outbound["sendThrough"] = wg_ip
+        # Route Xray outbound through WG tunnel using fwmark 2 (split-routing)
+        direct_outbound["streamSettings"] = {
+            "sockopt": {"mark": 2}
+        }
 
     config["outbounds"] = [
         direct_outbound,
