@@ -210,22 +210,28 @@ if [[ -f "$CONF_FILE" ]]; then
         DECODED="${DECODED//IFACE/$IFACE}"
         DECODED="${DECODED//IPADDR/$SERVER_IP}"
 
-        # Strip any existing PostUp/PreDown from the decoded template
-        DECODED="$(echo "$DECODED" | grep -v '^PostUp' | grep -v '^PreDown')"
+        # Strip any existing PostUp/PreDown/DNS/Table from the decoded template
+        DECODED="$(echo "$DECODED" | grep -v '^PostUp' | grep -v '^PreDown' | grep -v '^DNS' | grep -v '^Table')"
 
-        # Add MTU, Table=off (prevent wg-quick from replacing default route), DNS, PersistentKeepalive
+        # Extract the WG endpoint IP to protect its route
+        WG_ENDPOINT=$(echo "$DECODED" | grep -oP 'Endpoint\s*=\s*\K[^:]+')
+
+        # Add MTU, Table=off (critical: prevents wg-quick from managing routes)
         DECODED="$(echo "$DECODED" | sed "/^Address/a MTU = 1420")"
         DECODED="$(echo "$DECODED" | sed "/^MTU/a Table = off")"
-        DECODED="$(echo "$DECODED" | sed "/^Table/a DNS = 162.252.172.57, 149.154.159.92")"
         DECODED="$(echo "$DECODED" | sed "/^AllowedIPs/a PersistentKeepalive = 25")"
 
-        # Split-routing: only Xray traffic (fwmark 2) goes through WG.
-        # SSH, panel, and all other traffic stays on direct eth0.
-        DECODED="$(echo "$DECODED" | sed "/^DNS/a\\
+        # Split-routing PostUp/PreDown:
+        # 1. Protect WG endpoint: route it through original gateway (so tunnel stays up)
+        # 2. Route table 100: only fwmark-2 packets go through wg0
+        # 3. No DNS change — server uses its own DNS, Xray uses DoH
+        DECODED="$(echo "$DECODED" | sed "/^PersistentKeepalive/a\\
+PostUp = ip route add ${WG_ENDPOINT}/32 via $GATEWAY dev $IFACE 2>/dev/null || true\\
 PostUp = ip route add default dev wg0 table 100\\
 PostUp = ip rule add fwmark 2 table 100\\
 PreDown = ip rule del fwmark 2 table 100 || true\\
-PreDown = ip route del default dev wg0 table 100 || true")"
+PreDown = ip route del default dev wg0 table 100 || true\\
+PreDown = ip route del ${WG_ENDPOINT}/32 via $GATEWAY dev $IFACE || true")"
 
         mkdir -p /etc/wireguard
         echo "$DECODED" > /etc/wireguard/wg0.conf
