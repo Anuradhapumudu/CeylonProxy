@@ -213,9 +213,10 @@ if [[ -f "$CONF_FILE" ]]; then
         # Strip any existing PostUp/PreDown from the decoded template
         DECODED="$(echo "$DECODED" | grep -v '^PostUp' | grep -v '^PreDown')"
 
-        # Add MTU, DNS, PersistentKeepalive
+        # Add MTU, Table=off (prevent wg-quick from replacing default route), DNS, PersistentKeepalive
         DECODED="$(echo "$DECODED" | sed "/^Address/a MTU = 1420")"
-        DECODED="$(echo "$DECODED" | sed "/^MTU/a DNS = 162.252.172.57, 149.154.159.92")"
+        DECODED="$(echo "$DECODED" | sed "/^MTU/a Table = off")"
+        DECODED="$(echo "$DECODED" | sed "/^Table/a DNS = 162.252.172.57, 149.154.159.92")"
         DECODED="$(echo "$DECODED" | sed "/^AllowedIPs/a PersistentKeepalive = 25")"
 
         # Split-routing: only Xray traffic (fwmark 2) goes through WG.
