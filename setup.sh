@@ -210,31 +210,41 @@ if [[ -f "$CONF_FILE" ]]; then
         DECODED="${DECODED//IFACE/$IFACE}"
         DECODED="${DECODED//IPADDR/$SERVER_IP}"
 
-        # Strip any existing PostUp/PreDown/DNS/Table from the decoded template
-        DECODED="$(echo "$DECODED" | grep -v '^PostUp' | grep -v '^PreDown' | grep -v '^DNS' | grep -v '^Table')"
+        # Extract WG keys, address, endpoint from decoded config
+        WG_PRIVKEY=$(echo "$DECODED" | grep -oP 'PrivateKey\s*=\s*\K.*' | tr -d '[:space:]')
+        WG_ADDRESS=$(echo "$DECODED" | grep -oP 'Address\s*=\s*\K.*' | tr -d '[:space:]')
+        WG_PUBKEY=$(echo "$DECODED" | grep -oP 'PublicKey\s*=\s*\K.*' | tr -d '[:space:]')
+        WG_EP_HOST=$(echo "$DECODED" | grep -oP 'Endpoint\s*=\s*\K[^:]+')
+        WG_EP_PORT=$(echo "$DECODED" | grep -oP 'Endpoint\s*=\s*[^:]+:\K[0-9]+')
+        WG_ALLOWED=$(echo "$DECODED" | grep -oP 'AllowedIPs\s*=\s*\K.*' | tr -d '[:space:]')
 
-        # Extract the WG endpoint IP to protect its route
-        WG_ENDPOINT=$(echo "$DECODED" | grep -oP 'Endpoint\s*=\s*\K[^:]+')
+        # Resolve endpoint hostname to IP for route protection
+        WG_EP_IP=$(dig +short "$WG_EP_HOST" 2>/dev/null | head -1)
+        if [[ -z "$WG_EP_IP" ]]; then
+            WG_EP_IP=$(getent hosts "$WG_EP_HOST" 2>/dev/null | awk '{print $1}' | head -1)
+        fi
 
-        # Add MTU, Table=off (critical: prevents wg-quick from managing routes)
-        DECODED="$(echo "$DECODED" | sed "/^Address/a MTU = 1420")"
-        DECODED="$(echo "$DECODED" | sed "/^MTU/a Table = off")"
-        DECODED="$(echo "$DECODED" | sed "/^AllowedIPs/a PersistentKeepalive = 25")"
-
-        # Split-routing PostUp/PreDown:
-        # 1. Protect WG endpoint: route it through original gateway (so tunnel stays up)
-        # 2. Route table 100: only fwmark-2 packets go through wg0
-        # 3. No DNS change — server uses its own DNS, Xray uses DoH
-        DECODED="$(echo "$DECODED" | sed "/^PersistentKeepalive/a\\
-PostUp = ip route add ${WG_ENDPOINT}/32 via $GATEWAY dev $IFACE 2>/dev/null || true\\
-PostUp = ip route add default dev wg0 table 100\\
-PostUp = ip rule add fwmark 2 table 100\\
-PreDown = ip rule del fwmark 2 table 100 || true\\
-PreDown = ip route del default dev wg0 table 100 || true\\
-PreDown = ip route del ${WG_ENDPOINT}/32 via $GATEWAY dev $IFACE || true")"
-
+        # Build WG config with PostUp/PreDown in [Interface] section
         mkdir -p /etc/wireguard
-        echo "$DECODED" > /etc/wireguard/wg0.conf
+        cat > /etc/wireguard/wg0.conf << WGCONF
+[Interface]
+PrivateKey = ${WG_PRIVKEY}
+Address = ${WG_ADDRESS}
+MTU = 1420
+Table = off
+PostUp = ip route add ${WG_EP_IP}/32 via ${GATEWAY} dev ${IFACE} 2>/dev/null || true
+PostUp = ip route add default dev wg0 table 100
+PostUp = ip rule add fwmark 2 table 100
+PreDown = ip rule del fwmark 2 table 100 || true
+PreDown = ip route del default dev wg0 table 100 || true
+PreDown = ip route del ${WG_EP_IP}/32 via ${GATEWAY} dev ${IFACE} || true
+
+[Peer]
+PublicKey = ${WG_PUBKEY}
+Endpoint = ${WG_EP_HOST}:${WG_EP_PORT}
+AllowedIPs = ${WG_ALLOWED:-0.0.0.0/0}
+PersistentKeepalive = 25
+WGCONF
         chmod 600 /etc/wireguard/wg0.conf
         log "WireGuard config generated"
 
