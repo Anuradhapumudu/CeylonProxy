@@ -259,10 +259,16 @@ def generate_xray_config():
         "settings": {"domainStrategy": "UseIP"}
     }
     if wg_ip:
-        # Route Xray outbound through WG tunnel using fwmark 2 (split-routing)
-        direct_outbound["streamSettings"] = {
-            "sockopt": {"mark": 2}
-        }
+        # Only route through WG if peer has a recent handshake (tunnel is alive)
+        try:
+            hs_out = subprocess.run(['wg', 'show', 'wg0', 'latest-handshakes'],
+                                    capture_output=True, text=True, timeout=3)
+            hs_time = int(hs_out.stdout.strip().split('\t')[-1]) if hs_out.stdout.strip() else 0
+            wg_alive = hs_time > 0 and (int(time.time()) - hs_time) < 180  # 3 minute threshold
+        except Exception:
+            wg_alive = False
+        if wg_alive:
+            direct_outbound["streamSettings"] = {"sockopt": {"mark": 2}}
 
     config["outbounds"] = [
         direct_outbound,
