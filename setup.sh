@@ -149,8 +149,7 @@ log "Xray installed ($(xray version 2>/dev/null | head -1 || echo 'unknown versi
 # ─── 4. Install acme.sh for SSL ─────────────────────────────
 info "Installing acme.sh for SSL certificates..."
 
-# Prompt for email for Let's Encrypt
-read -p "Enter email for Let's Encrypt SSL registration (default: lkvpn@gmail.com): " ACME_EMAIL
+# Use ACME_EMAIL env var or default
 ACME_EMAIL=${ACME_EMAIL:-lkvpn@gmail.com}
 
 if [[ ! -f ~/.acme.sh/acme.sh ]]; then

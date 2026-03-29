@@ -197,6 +197,36 @@ def login_required(f):
 
 
 # ─── Xray Config Generation ────────────────────────────────────────────────
+def _build_direct_ips():
+    """Build list of IPs that must bypass the WG tunnel (prevent routing loops)."""
+    ips = ["geoip:private"]
+    # Server's own IP
+    server_ip = get_server_ip()
+    if server_ip and server_ip != '0.0.0.0':
+        ips.append(server_ip)
+    # WireGuard endpoint IP
+    try:
+        wg_out = subprocess.run(['wg', 'show', 'wg0', 'endpoints'],
+                                capture_output=True, text=True, timeout=3)
+        if wg_out.returncode == 0 and wg_out.stdout.strip():
+            ep = wg_out.stdout.strip().split('\t')[-1]  # pubkey\tIP:port
+            ep_ip = ep.rsplit(':', 1)[0]
+            if ep_ip and '.' in ep_ip:
+                ips.append(ep_ip)
+    except Exception:
+        pass
+    return ips
+
+
+def _build_direct_domains():
+    """Build list of domains that must bypass the WG tunnel."""
+    domains = ["duckdns.org"]
+    panel_domain = get_setting('panel_domain')
+    if panel_domain:
+        domains.append(panel_domain)
+    return domains
+
+
 def generate_xray_config():
     """Generate Xray config from database inbounds/clients."""
     db = get_db()
@@ -224,17 +254,9 @@ def generate_xray_config():
                 # Block bittorrent
                 {"type": "field", "outboundTag": "blocked", "protocol": ["bittorrent"]},
                 # Prevent routing loops — server's own IP must go direct
-                {"type": "field", "outboundTag": "direct", "ip": [
-                    "geoip:private",
-                    "165.22.243.162",     # Server's own IP
-                    "62.197.156.18",      # WireGuard endpoint
-                    "62.197.156.19",      # WG exit IP
-                ]},
+                {"type": "field", "outboundTag": "direct", "ip": _build_direct_ips()},
                 # Prevent routing loops — server's own domain must go direct
-                {"type": "field", "outboundTag": "direct", "domain": [
-                    "aidenandrew.duckdns.org",
-                    "duckdns.org",
-                ]},
+                {"type": "field", "outboundTag": "direct", "domain": _build_direct_domains()},
             ]
         },
         "inbounds": [],
