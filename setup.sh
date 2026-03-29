@@ -230,14 +230,18 @@ if [[ -f "$CONF_FILE" ]]; then
 [Interface]
 PrivateKey = ${WG_PRIVKEY}
 Address = ${WG_ADDRESS}
-MTU = 1420
+MTU = 1280
 Table = off
 PostUp = ip route add ${WG_EP_IP}/32 via ${GATEWAY} dev ${IFACE} 2>/dev/null || true
 PostUp = ip route add default dev wg0 table 100
 PostUp = ip rule add fwmark 2 table 100
+PostUp = iptables -t mangle -A POSTROUTING -o wg0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+PostUp = iptables -t mangle -A FORWARD -o wg0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 PreDown = ip rule del fwmark 2 table 100 || true
 PreDown = ip route del default dev wg0 table 100 || true
 PreDown = ip route del ${WG_EP_IP}/32 via ${GATEWAY} dev ${IFACE} || true
+PreDown = iptables -t mangle -D POSTROUTING -o wg0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu || true
+PreDown = iptables -t mangle -D FORWARD -o wg0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu || true
 
 [Peer]
 PublicKey = ${WG_PUBKEY}

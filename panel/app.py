@@ -305,6 +305,8 @@ def generate_xray_config():
                         "tcpFastOpen": True,
                         "tproxy": "off",
                         "tcpKeepAliveInterval": 30,
+                        "tcpKeepAliveIdle": 60,
+                        "tcpUserTimeout": 10000,
                         "tcpMptcp": True
                     }
                 },
@@ -448,16 +450,24 @@ def generate_share_link(inbound, client):
     else:
         type_str = "&type=tcp&headerType=none"
 
+    # Determine actual security mode — only use TLS if certs are configured
+    cert = inbound.get('cert_path') or get_setting('panel_cert')
+    key = inbound.get('key_path') or get_setting('panel_key')
+    tls_type = inbound.get('tls_type', 'tls')
+    has_tls = tls_type == 'tls' and cert and key
+
+    if has_tls:
+        security_str = f"&security=tls&sni={sni}&allowInsecure=true&alpn=h2%2Chttp%2F1.1&fp=chrome"
+    else:
+        security_str = "&security=none"
+
     if inbound['protocol'] == 'vless':
         flow_part = f"&flow={client.get('flow', '')}" if client.get('flow') else ""
         link = (
             f"vless://{client['client_id']}@{server_ip}:{port}"
-            f"?allowInsecure=true"
-            f"&alpn=h2%2Chttp%2F1.1"
-            f"&fp=chrome"
-            f"{type_str}"
-            f"&security=tls"
-            f"&sni={sni}"
+            f"?"
+            f"{type_str.lstrip('&')}"
+            f"{security_str}"
             f"{flow_part}"
             f"#{client['email']}"
         )
@@ -465,12 +475,9 @@ def generate_share_link(inbound, client):
         password = client.get('password') or client['client_id']
         link = (
             f"trojan://{password}@{server_ip}:{port}"
-            f"?allowInsecure=true"
-            f"&alpn=h2%2Chttp%2F1.1"
-            f"&fp=chrome"
-            f"{type_str}"
-            f"&security=tls"
-            f"&sni={sni}"
+            f"?"
+            f"{type_str.lstrip('&')}"
+            f"{security_str}"
             f"#{client['email']}"
         )
     else:
