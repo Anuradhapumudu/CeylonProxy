@@ -1,6 +1,22 @@
 # CeylonProxy
 
-Optimized WireGuard VPN management script for Surfshark Sri Lanka endpoints.
+Optimized VPN tools for Sri Lanka, featuring an automatic Xray VLESS+Reality setup for SLT Zoom bypass, and a WireGuard management script for Surfshark endpoints.
+
+## 🚀 Xray VLESS+Reality Quick Setup (SLT Zoom)
+
+Easily deploy a fast, secure Xray server on any VPS (Ubuntu/Debian/CentOS) with VLESS, Reality protocol, and SNI spoofing for `zoom.us` (ideal for SLT Zoom data quota bypass).
+
+```bash
+bash <(curl -Ls https://raw.githubusercontent.com/Anuradhapumudu/CeylonProxy/main/xray-setup.sh)
+```
+
+The script will automatically:
+1. Install Xray-core.
+2. Generate UUID, Short ID, and x25519 keys.
+3. Configure VLESS + Reality (SNI: `zoom.us`).
+4. Output a ready-to-use share link for clients like **Hiddify** (Mac/Windows/iOS) or **v2rayNG** (Android).
+
+---
 
 ## Features
 
@@ -16,7 +32,9 @@ Optimized WireGuard VPN management script for Surfshark Sri Lanka endpoints.
 | **Status Dashboard** | Real-time connection stats, transfer data, handshake info |
 | **Systemd Service** | Optional auto-start on boot |
 
-## Quick Start
+## 🛡️ WireGuard VPN Management (Surfshark)
+
+### Quick Start
 
 ```bash
 # Install
@@ -72,6 +90,7 @@ sudo apt install wireguard-tools iproute2 iptables xxd curl
 ## Files
 
 ```
+xray-setup.sh    — One-command Xray VLESS+Reality installer
 ceylonproxy.sh   — Main VPN management script
 install.sh       — Installer with dependency checks
 conf.txt         — Obfuscated WireGuard configuration
