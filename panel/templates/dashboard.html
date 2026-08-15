@@ -17,7 +17,7 @@
             <div class="logo-icon"><i class="bi bi-shield-lock-fill"></i></div>
             <div>
                 <div class="logo-text">CeylonProxy</div>
-                <div class="logo-sub">v3.1</div>
+                <div class="logo-sub">v3.2</div>
             </div>
         </div>
         <nav class="sidebar-nav">
@@ -32,6 +32,9 @@
             </a>
             <a class="nav-item" data-tab="logs" onclick="switchTab('logs')">
                 <i class="bi bi-terminal-fill"></i> Xray Logs
+            </a>
+            <a class="nav-item" data-tab="isbtv" onclick="switchTab('isbtv')">
+                <i class="bi bi-tv-fill"></i> SponsorBlock TV
             </a>
             <a class="nav-item" data-tab="ssl" onclick="switchTab('ssl')">
                 <i class="bi bi-file-earmark-lock2-fill"></i> SSL Certs
@@ -202,6 +205,126 @@
                         <div class="speed-value" id="pingValue">—</div>
                         <div class="speed-unit">ms</div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- iSponsorBlockTV Tab -->
+        <div class="tab-content" id="tab-isbtv">
+            <div class="tab-header">
+                <h3><i class="bi bi-tv-fill"></i> iSponsorBlock TV</h3>
+                <div class="tab-header-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="loadISBTV()" id="isbtvRefreshBtn">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Status Card -->
+            <div class="card" style="margin-bottom:16px">
+                <div class="card-body">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+                        <div style="display:flex;align-items:center;gap:16px">
+                            <div id="isbtvStatusIcon" style="font-size:2.2rem;color:#10b981"><i class="bi bi-tv-fill"></i></div>
+                            <div>
+                                <div style="font-size:1.1rem;font-weight:700;color:var(--text)">iSponsorBlockTV</div>
+                                <div id="isbtvStatusBadge" style="margin-top:4px">
+                                    <span class="badge" id="isbtvServiceBadge">Loading...</span>
+                                </div>
+                                <div style="font-size:0.8rem;color:var(--muted);margin-top:4px" id="isbtvDevicesLabel">Checking devices...</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap">
+                            <button class="btn btn-sm" style="background:#10b981" onclick="isbtvControl('start')" id="isbtvStartBtn">
+                                <i class="bi bi-play-fill"></i> Start
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="isbtvControl('restart')" id="isbtvRestartBtn">
+                                <i class="bi bi-arrow-clockwise"></i> Restart
+                            </button>
+                            <button class="btn btn-sm" style="background:#ef4444" onclick="isbtvControl('stop')" id="isbtvStopBtn">
+                                <i class="bi bi-stop-fill"></i> Stop
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Skip Stats -->
+                    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">
+                            Session Skip Stats
+                        </div>
+                        <div style="display:flex;gap:12px;flex-wrap:wrap">
+                            <div class="speed-card" style="flex:1;min-width:120px;padding:14px;text-align:center">
+                                <div style="font-size:1.8rem;font-weight:800;color:#10b981" id="isbtvTotalSkipped">—</div>
+                                <div style="font-size:0.8rem;color:var(--muted)">Segments Skipped</div>
+                            </div>
+                            <div style="flex:3;min-width:200px">
+                                <div style="font-size:0.8rem;color:var(--muted);margin-bottom:8px">By Category:</div>
+                                <div id="isbtvByType" style="display:flex;flex-wrap:wrap;gap:6px">
+                                    <span style="color:var(--muted);font-size:0.8rem">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Config Card -->
+            <div class="card" style="margin-bottom:16px">
+                <div class="card-body">
+                    <div style="font-size:0.9rem;font-weight:600;color:var(--text);margin-bottom:14px">
+                        <i class="bi bi-sliders"></i> Skip Configuration
+                    </div>
+
+                    <div style="margin-bottom:14px">
+                        <div style="font-size:0.8rem;color:var(--muted);margin-bottom:10px">Skip Categories</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px" id="isbtvCategories">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem">
+                            <label class="toggle-switch" style="transform:scale(0.85)">
+                                <input type="checkbox" id="isbtvMuteAds" onchange="saveISBTVConfig()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span>Mute Ads</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem">
+                            <label class="toggle-switch" style="transform:scale(0.85)">
+                                <input type="checkbox" id="isbtvSkipAds" onchange="saveISBTVConfig()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span>Skip Ads (YouTube Premium style)</span>
+                        </label>
+                    </div>
+
+                    <button class="btn btn-primary btn-sm" onclick="saveISBTVConfig()" id="isbtvSaveBtn">
+                        <i class="bi bi-check-lg"></i> Save Config & Restart
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Log Viewer -->
+            <div class="card">
+                <div class="card-body" style="padding-bottom:0">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+                        <div style="font-size:0.9rem;font-weight:600;color:var(--text)">
+                            <i class="bi bi-journal-text"></i> Live Logs
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <input type="text" class="log-search" id="isbtvLogFilter" placeholder="Filter logs..." oninput="filterISBTVLogs()" style="width:160px">
+                            <button class="btn btn-sm btn-secondary" id="isbtvLogPauseBtn" onclick="toggleISBTVLogPause()">
+                                <i class="bi bi-pause-fill" id="isbtvLogPauseIcon"></i>
+                            </button>
+                            <span class="live-indicator active" id="isbtvLiveIndicator">
+                                <span class="live-dot"></span> Live
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="log-viewer" style="height:280px">
+                    <pre id="isbtvLogContent">Loading logs...</pre>
                 </div>
             </div>
         </div>
@@ -508,6 +631,8 @@
     }
 
     let logAutoRefreshTimer = null;
+    let logInterval = null;
+    let isbtvLogInterval = null;
 
     function switchTab(tab) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -515,17 +640,19 @@
         document.getElementById('tab-' + tab).classList.add('active');
         document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
         document.getElementById('pageTitle').textContent =
-            {dashboard:'Dashboard', inbounds:'Inbounds', speedtest:'Speed Test', logs:'Xray Logs', ssl:'SSL Certificates', settings:'Settings'}[tab];
+            {dashboard:'Dashboard', inbounds:'Inbounds', speedtest:'Speed Test', logs:'Xray Logs', isbtv:'SponsorBlock TV', ssl:'SSL Certificates', settings:'Settings'}[tab];
         currentTab = tab;
 
         // Stop log auto-refresh when leaving logs tab
-        if (logAutoRefreshTimer) { clearInterval(logAutoRefreshTimer); logAutoRefreshTimer = null; }
+        if (tab !== 'logs' && logInterval) { clearInterval(logInterval); logInterval = null; }
+        if (tab !== 'isbtv' && isbtvLogInterval) { clearInterval(isbtvLogInterval); isbtvLogInterval = null; }
 
         if (tab === 'dashboard') { initChart(); loadStats(); loadVPNStatus(); }
         if (tab === 'inbounds') loadInbounds();
         if (tab === 'settings') { loadSettings(); loadSystemInfo(); loadServiceStatus(); }
         if (tab === 'ssl') loadSSLInfo();
         if (tab === 'speedtest') loadSpeedtestStatus();
+        if (tab === 'isbtv') loadISBTV();
         if (tab === 'logs') {
             loadLogs();
             // Auto-refresh every 3 seconds
@@ -1138,6 +1265,222 @@
         }
     });
     setInterval(() => { if (currentTab === 'dashboard') { loadStats(); loadVPNStatus(); } }, 10000);
+
+    // ─── iSponsorBlockTV ─────────────────────────────────────────────────────
+    const ISBTV_CATS = [
+        { id: 'sponsor',          label: 'Sponsor',       color: '#10b981' },
+        { id: 'selfpromo',        label: 'Self Promo',    color: '#f59e0b' },
+        { id: 'interaction',      label: 'Interaction',   color: '#3b82f6' },
+        { id: 'intro',            label: 'Intro',         color: '#8b5cf6' },
+        { id: 'outro',            label: 'Outro',         color: '#ec4899' },
+        { id: 'preview',          label: 'Preview',       color: '#06b6d4' },
+        { id: 'filler',           label: 'Filler',        color: '#6b7280' },
+        { id: 'music_offtopic',   label: 'Music OffTopic',color: '#ef4444' },
+        { id: 'exclusive_access', label: 'Excl. Access',  color: '#f97316' },
+        { id: 'hook',             label: 'Hook',          color: '#a855f7' },
+    ];
+
+    let isbtvConfig = {};
+    let isbtvLogsPaused = false;
+    let isbtvRawLogs = [];
+
+    function loadISBTV() {
+        fetch('/api/isbtv/status')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+
+                // Service badge
+                const badge = document.getElementById('isbtvServiceBadge');
+                const icon  = document.getElementById('isbtvStatusIcon');
+                if (data.running) {
+                    badge.textContent = '● Running';
+                    badge.className = 'badge badge-green';
+                    icon.style.color = '#10b981';
+                } else {
+                    badge.textContent = '○ Stopped';
+                    badge.className = 'badge';
+                    badge.style.background = '#ef4444';
+                    icon.style.color = '#ef4444';
+                }
+
+                // Devices
+                const devs = data.devices || [];
+                const devLabel = document.getElementById('isbtvDevicesLabel');
+                devLabel.textContent = devs.length
+                    ? `${devs.length} device${devs.length > 1 ? 's' : ''} connected: ${devs.map(d => d.name || d.id || JSON.stringify(d)).join(', ')}`
+                    : 'No devices configured';
+
+                // Skip stats
+                const stats = data.stats || {};
+                document.getElementById('isbtvTotalSkipped').textContent = stats.total_skipped ?? 0;
+                const byTypeEl = document.getElementById('isbtvByType');
+                const byType = stats.by_type || {};
+                const catKeys = Object.keys(byType);
+                if (catKeys.length) {
+                    byTypeEl.innerHTML = catKeys.map(k => {
+                        const cat = ISBTV_CATS.find(c => c.id === k);
+                        const color = cat ? cat.color : '#6b7280';
+                        return `<span class="badge" style="background:${color}22;color:${color};border:1px solid ${color}44">${cat ? cat.label : k}: ${byType[k]}</span>`;
+                    }).join('');
+                } else {
+                    byTypeEl.innerHTML = '<span style="color:var(--muted);font-size:0.8rem">No skips recorded yet</span>';
+                }
+
+                // Config
+                isbtvConfig = data.config || {};
+                renderISBTVCategories(data.skip_categories || []);
+                document.getElementById('isbtvMuteAds').checked = !!data.mute_ads;
+                document.getElementById('isbtvSkipAds').checked  = !!data.skip_ads;
+            })
+            .catch(() => {});
+
+        // Start log polling
+        loadISBTVLogs();
+        if (!isbtvLogInterval) {
+            isbtvLogInterval = setInterval(() => {
+                if (!isbtvLogsPaused && currentTab === 'isbtv') loadISBTVLogs();
+            }, 3000);
+        }
+    }
+
+    function renderISBTVCategories(active) {
+        const el = document.getElementById('isbtvCategories');
+        el.innerHTML = ISBTV_CATS.map(cat => {
+            const checked = active.includes(cat.id) ? 'checked' : '';
+            return `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;
+                        background:${checked ? cat.color + '22' : 'var(--bg-card)'};
+                        border:1px solid ${checked ? cat.color + '66' : 'var(--border)'};
+                        border-radius:6px;padding:5px 10px;font-size:0.8rem;transition:all .2s">
+                        <input type="checkbox" class="isbtv-cat-cb" value="${cat.id}" ${checked}
+                            style="accent-color:${cat.color}" onchange="onISBTVCatChange(this,'${cat.color}')">
+                        <span style="color:${checked ? cat.color : 'var(--text)'}">${cat.label}</span>
+                    </label>`;
+        }).join('');
+    }
+
+    function onISBTVCatChange(cb, color) {
+        const label = cb.closest('label');
+        if (cb.checked) {
+            label.style.background = color + '22';
+            label.style.border = `1px solid ${color}66`;
+            label.querySelector('span').style.color = color;
+        } else {
+            label.style.background = 'var(--bg-card)';
+            label.style.border = '1px solid var(--border)';
+            label.querySelector('span').style.color = 'var(--text)';
+        }
+    }
+
+    function isbtvControl(action) {
+        const btn = document.getElementById(`isbtv${action.charAt(0).toUpperCase()+action.slice(1)}Btn`);
+        if (btn) { btn.disabled = true; btn.innerHTML = `<i class="bi bi-hourglass-split"></i>`; }
+        fetch('/api/isbtv/control', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action})
+        })
+        .then(r => r.json())
+        .then(data => {
+            toast(data.msg || (data.success ? 'Done' : 'Failed'));
+            setTimeout(loadISBTV, 800);
+        })
+        .catch(() => toast('Request failed'))
+        .finally(() => {
+            if (btn) { btn.disabled = false; btn.innerHTML = `<i class="bi bi-${action==='start'?'play':'action'==='stop'?'stop':'arrow-clockwise'}-fill"></i> ${action.charAt(0).toUpperCase()+action.slice(1)}`; }
+            if (action === 'start') { btn.innerHTML = '<i class="bi bi-play-fill"></i> Start'; }
+            else if (action === 'stop') { btn.innerHTML = '<i class="bi bi-stop-fill"></i> Stop'; }
+            else { btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Restart'; }
+        });
+    }
+
+    function saveISBTVConfig() {
+        const saveBtn = document.getElementById('isbtvSaveBtn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+
+        const checked = [...document.querySelectorAll('.isbtv-cat-cb:checked')].map(cb => cb.value);
+        const newCfg = Object.assign({}, isbtvConfig, {
+            skip_categories: checked,
+            mute_ads:  document.getElementById('isbtvMuteAds').checked,
+            skip_ads:  document.getElementById('isbtvSkipAds').checked,
+        });
+
+        fetch('/api/isbtv/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({config: newCfg})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                toast('Config saved — restarting service...');
+                isbtvConfig = newCfg;
+                // Auto-restart to pick up new config
+                return fetch('/api/isbtv/control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'restart'})
+                });
+            } else {
+                toast('Save failed: ' + data.msg);
+            }
+        })
+        .then(() => setTimeout(loadISBTV, 1500))
+        .catch(() => toast('Save failed'))
+        .finally(() => {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save Config & Restart';
+        });
+    }
+
+    function loadISBTVLogs() {
+        fetch('/api/isbtv/logs?lines=150')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+                isbtvRawLogs = data.logs || [];
+                filterISBTVLogs();
+            })
+            .catch(() => {});
+    }
+
+    function filterISBTVLogs() {
+        const filter = (document.getElementById('isbtvLogFilter')?.value || '').toLowerCase();
+        const el = document.getElementById('isbtvLogContent');
+        if (!el) return;
+        const lines = filter
+            ? isbtvRawLogs.filter(l => l.toLowerCase().includes(filter))
+            : isbtvRawLogs;
+        // Color-code: green for skip, yellow for warning, red for error
+        el.innerHTML = lines.map(l => {
+            const ll = l.toLowerCase();
+            let color = '';
+            if (ll.includes('skipping') || ll.includes('skipped')) color = '#10b981';
+            else if (ll.includes('error') || ll.includes('fail')) color = '#ef4444';
+            else if (ll.includes('warn')) color = '#f59e0b';
+            return color ? `<span style="color:${color}">${escHtml(l)}</span>` : escHtml(l);
+        }).join('\n') || '<span style="color:var(--muted)">No logs found</span>';
+        if (!isbtvLogsPaused) el.parentElement.scrollTop = el.parentElement.scrollHeight;
+    }
+
+    function escHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function toggleISBTVLogPause() {
+        isbtvLogsPaused = !isbtvLogsPaused;
+        const icon = document.getElementById('isbtvLogPauseIcon');
+        const indicator = document.getElementById('isbtvLiveIndicator');
+        if (isbtvLogsPaused) {
+            icon.className = 'bi bi-play-fill';
+            indicator.classList.remove('active');
+        } else {
+            icon.className = 'bi bi-pause-fill';
+            indicator.classList.add('active');
+            loadISBTVLogs();
+        }
+    }
     </script>
 </body>
 </html>
