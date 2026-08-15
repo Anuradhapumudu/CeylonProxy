@@ -1565,34 +1565,9 @@ def api_speedtest_status():
     })
 
 
-# ─── Main ───────────────────────────────────────────────────────────────────
-def main():
-    init_db()
-    port = int(get_setting('panel_port', '8443'))
-    cert = get_setting('panel_cert')
-    key = get_setting('panel_key')
-
-    ssl_ctx = None
-    if cert and key and os.path.exists(cert) and os.path.exists(key):
-        import ssl
-        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        ssl_ctx.load_cert_chain(cert, key)
-        logger.info(f"Panel running with HTTPS on port {port}")
-    else:
-        logger.info(f"Panel running with HTTP on port {port} (no SSL configured)")
-
-    app.run(host='0.0.0.0', port=port, ssl_context=ssl_ctx, debug=False)
-
-
-if __name__ == '__main__':
-    main()
-
-
 # ═══════════════════════════════════════════════════════════════
 # iSponsorBlockTV Integration
 # ═══════════════════════════════════════════════════════════════
-import re as _re
-
 ISBTV_DIR     = "/root/iSponsorBlockTV"
 ISBTV_CONFIG  = "/root/.local/share/iSponsorBlockTV/config.json"
 ISBTV_SERVICE = "isponsorblockTV"
@@ -1636,7 +1611,6 @@ def _get_isbtv_logs(lines=100):
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip().split("\n")
-        # Fallback without format flag
         proc = subprocess.run(
             ["journalctl", "-u", ISBTV_SERVICE, "-n", str(lines), "--no-pager"],
             capture_output=True, text=True, timeout=5
@@ -1727,3 +1701,27 @@ def api_isbtv_config():
         return jsonify({"success": True, "msg": "Config saved"})
     except Exception as e:
         return jsonify({"success": False, "msg": str(e)})
+
+
+# ─── Main ───────────────────────────────────────────────────────────────────
+def main():
+    init_db()
+    port = int(get_setting('panel_port', '8443'))
+    cert = get_setting('panel_cert')
+    key = get_setting('panel_key')
+
+    ssl_ctx = None
+    if cert and key and os.path.exists(cert) and os.path.exists(key):
+        import ssl
+        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ssl_ctx.load_cert_chain(cert, key)
+        logger.info(f"Panel running with HTTPS on port {port}")
+    else:
+        logger.info(f"Panel running with HTTP on port {port} (no SSL configured)")
+
+    app.run(host='0.0.0.0', port=port, ssl_context=ssl_ctx, debug=False)
+
+
+if __name__ == '__main__':
+    main()
+
