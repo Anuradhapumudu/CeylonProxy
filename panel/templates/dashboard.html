@@ -268,6 +268,24 @@
                 </div>
             </div>
 
+            <!-- Devices Card -->
+            <div class="card" style="margin-bottom:16px">
+                <div class="card-body">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+                        <div style="font-size:0.95rem;font-weight:600;color:var(--text)">
+                            <i class="bi bi-display"></i> Connected TV Devices
+                        </div>
+                        <button class="btn btn-accent btn-sm" onclick="showAddDeviceModal()">
+                            <i class="bi bi-plus-lg"></i> Add / Pair TV
+                        </button>
+                    </div>
+
+                    <div id="isbtvDevicesList" style="display:flex;flex-direction:column;gap:10px">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+
             <!-- Config Card -->
             <div class="card" style="margin-bottom:16px">
                 <div class="card-body">
@@ -593,6 +611,60 @@
             <div class="qr-container" id="shareLinkQR"></div>
             <textarea id="shareLink" class="share-link-box" readonly></textarea>
             <button class="btn btn-primary copy-btn" onclick="copyLink()"><i class="bi bi-clipboard"></i> Copy Link</button>
+        </div>
+    </div>
+
+    <!-- Add Device Modal -->
+    <div class="modal" id="deviceModal">
+        <div class="modal-header accent-header">
+            <h3><i class="bi bi-tv-fill"></i> Pair / Add TV Device</h3>
+            <button class="modal-close" onclick="closeAllModals()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px">
+                <button class="btn btn-sm btn-secondary active" id="pairTabCodeBtn" onclick="switchPairMethod('code')">
+                    <i class="bi bi-123"></i> Link with TV Code
+                </button>
+                <button class="btn btn-sm btn-secondary" id="pairTabManualBtn" onclick="switchPairMethod('manual')">
+                    <i class="bi bi-gear"></i> Manual Screen ID
+                </button>
+            </div>
+
+            <!-- Method 1: TV Code -->
+            <div id="pairMethodCode">
+                <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);color:var(--text);padding:12px 14px;border-radius:8px;font-size:0.84rem;margin-bottom:14px;line-height:1.5">
+                    <strong><i class="bi bi-info-circle" style="color:#3b82f6"></i> Easy Pairing with YouTube TV:</strong><br>
+                    1. Open <strong>YouTube</strong> on your Smart TV / Apple TV / Fire TV.<br>
+                    2. Go to <strong>Settings</strong> ⚙️ → <strong>Link with TV code</strong>.<br>
+                    3. Type the 12-digit code below and click <strong>Pair TV</strong>.
+                </div>
+                <div class="form-group">
+                    <label><i class="bi bi-upc-scan"></i> 12-Digit TV Pairing Code</label>
+                    <input type="text" id="pairTvCode" placeholder="e.g. 123 456 789 012" maxlength="18" style="font-size:1.15rem;letter-spacing:2px;font-weight:700">
+                </div>
+                <div class="form-group">
+                    <label><i class="bi bi-tag"></i> Custom Name (Optional)</label>
+                    <input type="text" id="pairTvName" placeholder="e.g. Living Room TV (auto-detected if empty)">
+                </div>
+            </div>
+
+            <!-- Method 2: Manual Screen ID -->
+            <div id="pairMethodManual" style="display:none">
+                <div class="form-group">
+                    <label><i class="bi bi-tag"></i> Device Name</label>
+                    <input type="text" id="manualDeviceName" placeholder="e.g. Bedroom TV">
+                </div>
+                <div class="form-group">
+                    <label><i class="bi bi-key"></i> Screen ID</label>
+                    <input type="text" id="manualScreenId" placeholder="e.g. 3b4d0e99050a1e831a25f60dc6a15da8...">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeAllModals()">Cancel</button>
+            <button class="btn btn-accent" id="submitDeviceBtn" onclick="submitDeviceAction()">
+                <i class="bi bi-link-45deg"></i> Pair TV
+            </button>
         </div>
     </div>
 
@@ -1308,8 +1380,9 @@
                 const devs = data.devices || [];
                 const devLabel = document.getElementById('isbtvDevicesLabel');
                 devLabel.textContent = devs.length
-                    ? `${devs.length} device${devs.length > 1 ? 's' : ''} connected: ${devs.map(d => d.name || d.id || JSON.stringify(d)).join(', ')}`
-                    : 'No devices configured';
+                    ? `${devs.length} device${devs.length > 1 ? 's' : ''} connected: ${devs.map(d => d.name || 'YouTube on TV').join(', ')}`
+                    : 'No devices configured — click Add / Pair TV below';
+                renderISBTVDevices(devs);
 
                 // Skip stats
                 const stats = data.stats || {};
@@ -1342,6 +1415,205 @@
                 if (!isbtvLogsPaused && currentTab === 'isbtv') loadISBTVLogs();
             }, 3000);
         }
+    }
+
+    function renderISBTVDevices(devices) {
+        const list = document.getElementById('isbtvDevicesList');
+        if (!list) return;
+        if (!devices || devices.length === 0) {
+            list.innerHTML = `
+                <div style="text-align:center;padding:24px 16px;background:var(--bg-card);border:1px dashed var(--border);border-radius:10px">
+                    <i class="bi bi-tv" style="font-size:2rem;color:var(--muted);margin-bottom:8px;display:inline-block"></i>
+                    <div style="font-size:0.9rem;font-weight:600;color:var(--text);margin-bottom:4px">No TV Devices Paired</div>
+                    <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px">Link your TV using a 12-digit code from the YouTube app on your TV</div>
+                    <button class="btn btn-accent btn-sm" onclick="showAddDeviceModal()">
+                        <i class="bi bi-plus-lg"></i> Pair Your First TV
+                    </button>
+                </div>`;
+            return;
+        }
+
+        list.innerHTML = devices.map(dev => {
+            const sid = dev.screen_id || '';
+            const shortSid = sid.length > 24 ? sid.substring(0, 12) + '...' + sid.substring(sid.length - 8) : sid;
+            const name = dev.name || 'YouTube on TV';
+            return `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;gap:12px;flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;gap:12px;min-width:200px">
+                        <div style="width:40px;height:40px;border-radius:8px;background:rgba(124,58,237,0.15);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:1.25rem">
+                            <i class="bi bi-tv-fill"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.95rem;font-weight:600;color:var(--text)">${escHtml(name)}</div>
+                            <div style="font-size:0.75rem;color:var(--muted);font-family:monospace" title="${escHtml(sid)}">ID: ${escHtml(shortSid)}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px">
+                        <button class="btn btn-xs btn-secondary" onclick="renameISBTVDevice('${encodeURIComponent(sid)}', '${escHtml(name)}')" title="Rename Device">
+                            <i class="bi bi-pencil-fill"></i> Rename
+                        </button>
+                        <button class="btn btn-xs btn-danger" onclick="deleteISBTVDevice('${encodeURIComponent(sid)}', '${escHtml(name)}')" title="Remove Device">
+                            <i class="bi bi-trash3-fill"></i> Remove
+                        </button>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    let currentPairMethod = 'code';
+
+    function showAddDeviceModal() {
+        document.getElementById('pairTvCode').value = '';
+        document.getElementById('pairTvName').value = '';
+        document.getElementById('manualDeviceName').value = '';
+        document.getElementById('manualScreenId').value = '';
+        switchPairMethod('code');
+        openModal('deviceModal');
+    }
+
+    function switchPairMethod(method) {
+        currentPairMethod = method;
+        const codeTab = document.getElementById('pairTabCodeBtn');
+        const manualTab = document.getElementById('pairTabManualBtn');
+        const codeSection = document.getElementById('pairMethodCode');
+        const manualSection = document.getElementById('pairMethodManual');
+        const submitBtn = document.getElementById('submitDeviceBtn');
+
+        if (method === 'code') {
+            codeTab.classList.add('active');
+            manualTab.classList.remove('active');
+            codeSection.style.display = 'block';
+            manualSection.style.display = 'none';
+            submitBtn.innerHTML = '<i class="bi bi-link-45deg"></i> Pair TV';
+        } else {
+            manualTab.classList.add('active');
+            codeTab.classList.remove('active');
+            manualSection.style.display = 'block';
+            codeSection.style.display = 'none';
+            submitBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Add Device';
+        }
+    }
+
+    function submitDeviceAction() {
+        if (currentPairMethod === 'code') {
+            submitPairCode();
+        } else {
+            submitManualDevice();
+        }
+    }
+
+    function submitPairCode() {
+        const codeInput = document.getElementById('pairTvCode');
+        const nameInput = document.getElementById('pairTvName');
+        const pairing_code = codeInput.value.trim();
+        const name = nameInput.value.trim();
+
+        if (!pairing_code) {
+            toast('Please enter the 12-digit TV pairing code');
+            codeInput.focus();
+            return;
+        }
+
+        const btn = document.getElementById('submitDeviceBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Pairing with YouTube...';
+
+        fetch('/api/isbtv/devices/pair-code', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({pairing_code, name})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                toast(data.msg);
+                closeAllModals();
+                loadISBTV();
+            } else {
+                toast('Pairing failed: ' + data.msg);
+            }
+        })
+        .catch(() => toast('Pairing request failed'))
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-link-45deg"></i> Pair TV';
+        });
+    }
+
+    function submitManualDevice() {
+        const nameInput = document.getElementById('manualDeviceName');
+        const sidInput = document.getElementById('manualScreenId');
+        const name = nameInput.value.trim() || 'YouTube on TV';
+        const screen_id = sidInput.value.trim();
+
+        if (!screen_id) {
+            toast('Please enter the Screen ID');
+            sidInput.focus();
+            return;
+        }
+
+        const btn = document.getElementById('submitDeviceBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+
+        fetch('/api/isbtv/devices', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, screen_id})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                toast(data.msg);
+                closeAllModals();
+                loadISBTV();
+            } else {
+                toast('Failed: ' + data.msg);
+            }
+        })
+        .catch(() => toast('Request failed'))
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-plus-lg"></i> Add Device';
+        });
+    }
+
+    function deleteISBTVDevice(encodedSid, name) {
+        if (!confirm(`Are you sure you want to remove "${name}" from iSponsorBlockTV?\n\nSponsor-skipping will stop for this TV.`)) {
+            return;
+        }
+        fetch(`/api/isbtv/devices/${encodedSid}`, { method: 'DELETE' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    toast('Device removed');
+                    loadISBTV();
+                } else {
+                    toast('Failed: ' + data.msg);
+                }
+            })
+            .catch(() => toast('Request failed'));
+    }
+
+    function renameISBTVDevice(encodedSid, currentName) {
+        const newName = prompt(`Enter new name for device:`, currentName);
+        if (!newName || newName.trim() === currentName) return;
+
+        fetch(`/api/isbtv/devices/${encodedSid}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: newName.trim()})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                toast('Device renamed');
+                loadISBTV();
+            } else {
+                toast('Failed: ' + data.msg);
+            }
+        })
+        .catch(() => toast('Request failed'));
     }
 
     function renderISBTVCategories(active) {

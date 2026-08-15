@@ -1687,6 +1687,156 @@ def api_isbtv_control():
         return jsonify({"success": False, "msg": str(e)})
 
 
+def _pair_youtube_lounge(pairing_code):
+    """Call YouTube Lounge API to resolve a 12-digit TV pairing code into screen_id + name."""
+    normalized = str(pairing_code).replace("-", "").replace(" ", "")
+    if not normalized or not normalized.isalnum():
+        return False, "Invalid pairing code format. Expected 12 digits from TV."
+
+    url = "https://www.youtube.com/api/lounge/pairing/get_screen"
+    data = urllib.parse.urlencode({"pairing_code": normalized}).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status == 200:
+                res_data = json.loads(resp.read().decode("utf-8"))
+                screen = res_data.get("screen")
+                if screen and screen.get("screenId"):
+                    return True, {
+                        "screen_id": screen.get("screenId"),
+                        "name": screen.get("name") or "YouTube on TV",
+                        "lounge_token": screen.get("loungeToken")
+                    }
+            return False, "TV code not found or expired. Please generate a fresh code on your TV."
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return False, "TV code not recognized by YouTube. Please verify the code on your TV screen."
+        return False, f"YouTube API returned HTTP {e.code}"
+    except Exception as e:
+        return False, f"Pairing request failed: {str(e)}"
+
+
+@app.route("/api/isbtv/devices/pair-code", methods=["POST"])
+@login_required
+def api_isbtv_pair_code():
+    """Pair a new TV using a 12-digit code generated in YouTube on TV."""
+    data = request.json or {}
+    pairing_code = data.get("pairing_code", "").strip()
+    custom_name = data.get("name", "").strip()
+
+    if not pairing_code:
+        return jsonify({"success": False, "msg": "Pairing code is required"})
+
+    ok, result = _pair_youtube_lounge(pairing_code)
+    if not ok:
+        return jsonify({"success": False, "msg": result})
+
+    screen_id = result["screen_id"]
+    device_name = custom_name or result.get("name") or "YouTube on TV"
+
+    cfg = _get_isbtv_config()
+    devices = cfg.get("devices", [])
+
+    existing = next((d for d in devices if d.get("screen_id") == screen_id), None)
+    if existing:
+        existing["name"] = device_name
+    else:
+        devices.append({"screen_id": screen_id, "name": device_name})
+    cfg["devices"] = devices
+
+    try:
+        os.makedirs(os.path.dirname(ISBTV_CONFIG), exist_ok=True)
+        with open(ISBTV_CONFIG, "w") as f:
+            json.dump(cfg, f, indent=4)
+        subprocess.run(["systemctl", "restart", ISBTV_SERVICE], capture_output=True, timeout=10)
+        return jsonify({
+            "success": True,
+            "msg": f"Successfully paired \"{device_name}\"!",
+            "device": {"screen_id": screen_id, "name": device_name},
+            "devices": devices
+        })
+    except Exception as e:
+        return jsonify({"success": False, "msg": f"Failed to save config: {e}"})
+
+
+@app.route("/api/isbtv/devices", methods=["POST"])
+@login_required
+def api_isbtv_add_device_manual():
+    """Manually add or update a device by screen_id."""
+    data = request.json or {}
+    screen_id = data.get("screen_id", "").strip()
+    name = data.get("name", "").strip() or "YouTube on TV"
+
+    if not screen_id:
+        return jsonify({"success": False, "msg": "Screen ID is required"})
+
+    cfg = _get_isbtv_config()
+    devices = cfg.get("devices", [])
+
+    existing = next((d for d in devices if d.get("screen_id") == screen_id), None)
+    if existing:
+        existing["name"] = name
+    else:
+        devices.append({"screen_id": screen_id, "name": name})
+    cfg["devices"] = devices
+
+    try:
+        os.makedirs(os.path.dirname(ISBTV_CONFIG), exist_ok=True)
+        with open(ISBTV_CONFIG, "w") as f:
+            json.dump(cfg, f, indent=4)
+        subprocess.run(["systemctl", "restart", ISBTV_SERVICE], capture_output=True, timeout=10)
+        return jsonify({"success": True, "msg": f"Device \"{name}\" saved!", "devices": devices})
+    except Exception as e:
+        return jsonify({"success": False, "msg": f"Failed to save: {e}"})
+
+
+@app.route("/api/isbtv/devices/<path:screen_id>", methods=["PUT", "DELETE"])
+@login_required
+def api_isbtv_device_item(screen_id):
+    """Update or remove a device by screen_id."""
+    cfg = _get_isbtv_config()
+    devices = cfg.get("devices", [])
+
+    if request.method == "DELETE":
+        orig_len = len(devices)
+        devices = [d for d in devices if d.get("screen_id") != screen_id]
+        if len(devices) == orig_len:
+            return jsonify({"success": False, "msg": "Device not found"})
+        cfg["devices"] = devices
+        try:
+            with open(ISBTV_CONFIG, "w") as f:
+                json.dump(cfg, f, indent=4)
+            subprocess.run(["systemctl", "restart", ISBTV_SERVICE], capture_output=True, timeout=10)
+            return jsonify({"success": True, "msg": "Device removed successfully", "devices": devices})
+        except Exception as e:
+            return jsonify({"success": False, "msg": str(e)})
+
+    elif request.method == "PUT":
+        data = request.json or {}
+        new_name = data.get("name", "").strip()
+        if not new_name:
+            return jsonify({"success": False, "msg": "Device name cannot be empty"})
+        target = next((d for d in devices if d.get("screen_id") == screen_id), None)
+        if not target:
+            return jsonify({"success": False, "msg": "Device not found"})
+        target["name"] = new_name
+        cfg["devices"] = devices
+        try:
+            with open(ISBTV_CONFIG, "w") as f:
+                json.dump(cfg, f, indent=4)
+            subprocess.run(["systemctl", "restart", ISBTV_SERVICE], capture_output=True, timeout=10)
+            return jsonify({"success": True, "msg": "Device renamed", "devices": devices})
+        except Exception as e:
+            return jsonify({"success": False, "msg": str(e)})
+
+
 @app.route("/api/isbtv/config", methods=["GET", "POST"])
 @login_required
 def api_isbtv_config():
