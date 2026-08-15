@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-CeylonProxy — Web Management Panel for Xray (VLESS/Trojan)
+CeylonProxy — Web Management Panel for Xray (VLESS/Trojan/REALITY)
 A lightweight 3X-UI alternative with WireGuard VPN integration.
+Compatible with Xray-core v26.7.28+ (YY.M.D versioning).
+Note: allowInsecure was removed in Xray v26.6.1 — it is NOT used here.
 """
 
 import os
@@ -242,8 +244,8 @@ def generate_xray_config():
         },
         "dns": {
             "servers": [
-                {"address": "https+local://1.1.1.1/dns-query", "skipFallback": False},
-                {"address": "https+local://8.8.8.8/dns-query", "skipFallback": False},
+                {"address": "https+local://1.1.1.1/dns-query"},
+                {"address": "https+local://8.8.8.8/dns-query"},
             ] if dns_servers == ['1.1.1.1', '8.8.8.8'] else [s.strip() for s in dns_servers],
             "queryStrategy": "UseIPv4",
             "tag": "dns-out"
@@ -253,6 +255,8 @@ def generate_xray_config():
             "rules": [
                 # Block bittorrent
                 {"type": "field", "outboundTag": "blocked", "protocol": ["bittorrent"]},
+                # Block private-range egress (3x-ui v3.6.0 security hardening)
+                {"type": "field", "outboundTag": "blocked", "ip": ["geoip:private"]},
                 # Prevent routing loops — server's own IP must go direct
                 {"type": "field", "outboundTag": "direct", "ip": _build_direct_ips()},
                 # Prevent routing loops — server's own domain must go direct
@@ -312,65 +316,123 @@ def generate_xray_config():
                 clients.append(client)
 
             transport = dict(ib).get('transport', 'tcp')
-            inbound_cfg = {
-                "port": ib['port'],
-                "protocol": "vless",
-                "tag": f"inbound-{ib['id']}",
-                "settings": {
-                    "clients": clients,
-                    "decryption": "none"
-                },
-                "streamSettings": {
-                    "network": transport,
-                    "security": ib['tls_type'] or "tls",
-                    "sockopt": {
-                        "tcpFastOpen": True,
-                        "tproxy": "off",
-                        "tcpKeepAliveInterval": 30,
-                        "tcpKeepAliveIdle": 60,
-                        "tcpUserTimeout": 10000,
-                        "tcpMptcp": True
-                    }
-                },
-                "sniffing": {
-                    "enabled": True,
-                    "destOverride": ["http", "tls", "quic"],
-                    "routeOnly": True
-                }
-            }
+            tls_type = ib['tls_type'] or 'none'
 
-            # TLS settings logic
-            cert = ib['cert_path'] or get_setting('panel_cert')
-            key = ib['key_path'] or get_setting('panel_key')
-            
-            if ib['tls_type'] == 'tls' and cert and key:
-                inbound_cfg["streamSettings"]["security"] = "tls"
-                inbound_cfg["streamSettings"]["tlsSettings"] = {
-                    "serverName": ib['sni'] or "",
-                    "minVersion": "1.2",
-                    "maxVersion": "1.3",
-                    "rejectUnknownSni": False,
-                    "certificates": [{
-                        "certificateFile": cert,
-                        "keyFile": key
-                    }],
-                    "alpn": ["h2", "http/1.1"],
+            # ── REALITY inbound (Xray v26.x compatible) ──────────────
+            if tls_type == 'reality':
+                settings_extra = json.loads(ib['settings_json'] or '{}')
+                reality_dest  = settings_extra.get('reality_dest', 'zoom.us:443')
+                private_key   = settings_extra.get('reality_private_key', '')
+                short_ids     = settings_extra.get('reality_short_ids', [''])
+                server_names  = settings_extra.get('reality_server_names',
+                                                   [reality_dest.split(':')[0]])
+                # Ensure clients have xtls-rprx-vision flow for REALITY
+                for client in clients:
+                    if not client.get('flow'):
+                        client['flow'] = 'xtls-rprx-vision'
+                inbound_cfg = {
+                    "port": ib['port'],
+                    "protocol": "vless",
+                    "tag": f"inbound-{ib['id']}",
+                    "settings": {
+                        "clients": clients,
+                        "decryption": "none"
+                    },
+                    "streamSettings": {
+                        "network": "tcp",
+                        "security": "reality",
+                        "realitySettings": {
+                            "show": False,
+                            "dest": reality_dest,
+                            "xver": 0,
+                            "serverNames": server_names,
+                            "privateKey": private_key,
+                            "minClientVer": "",
+                            "maxClientVer": "",
+                            "maxTimeDiff": 0,
+                            "shortIds": short_ids
+                        },
+                        "sockopt": {
+                            "tcpFastOpen": True,
+                            "tcpKeepAliveInterval": 30,
+                            "tcpKeepAliveIdle": 60,
+                            "tcpMptcp": True
+                        }
+                    },
+                    "sniffing": {
+                        "enabled": True,
+                        "destOverride": ["http", "tls", "quic"],
+                        "routeOnly": True
+                    }
                 }
+
+            # ── Standard VLESS+TLS / VLESS+none inbound ──────────────
             else:
-                inbound_cfg["streamSettings"]["security"] = "none"
-
-            if transport == 'ws':
-                inbound_cfg["streamSettings"]["wsSettings"] = {
-                    "path": "/xray",
-                    "headers": {
-                        "Host": ib['sni'] or "teams.microsoft.com"
+                inbound_cfg = {
+                    "port": ib['port'],
+                    "protocol": "vless",
+                    "tag": f"inbound-{ib['id']}",
+                    "settings": {
+                        "clients": clients,
+                        "decryption": "none"
+                    },
+                    "streamSettings": {
+                        "network": transport,
+                        "security": tls_type,
+                        "sockopt": {
+                            "tcpFastOpen": True,
+                            "tproxy": "off",
+                            "tcpKeepAliveInterval": 30,
+                            "tcpKeepAliveIdle": 60,
+                            "tcpUserTimeout": 10000,
+                            "tcpMptcp": True
+                        }
+                    },
+                    "sniffing": {
+                        "enabled": True,
+                        "destOverride": ["http", "tls", "quic"],
+                        "routeOnly": True
                     }
                 }
-            elif transport == 'tcp':
-                inbound_cfg["streamSettings"]["tcpSettings"] = {
-                    "acceptProxyProtocol": False,
-                    "header": {"type": "none"}
-                }
+
+                # TLS settings — no allowInsecure (removed in Xray v26.6.1)
+                cert = ib['cert_path'] or get_setting('panel_cert')
+                key = ib['key_path'] or get_setting('panel_key')
+
+                if tls_type == 'tls' and cert and key:
+                    inbound_cfg["streamSettings"]["tlsSettings"] = {
+                        "serverName": ib['sni'] or "",
+                        "minVersion": "1.2",
+                        "maxVersion": "1.3",
+                        "rejectUnknownSni": False,
+                        "certificates": [{
+                            "certificateFile": cert,
+                            "keyFile": key
+                        }],
+                        "alpn": ["h2", "http/1.1"],
+                    }
+                else:
+                    inbound_cfg["streamSettings"]["security"] = "none"
+
+                if transport == 'ws':
+                    inbound_cfg["streamSettings"]["wsSettings"] = {
+                        "path": "/xray",
+                        "headers": {
+                            "Host": ib['sni'] or "teams.microsoft.com"
+                        }
+                    }
+                elif transport == 'tcp':
+                    inbound_cfg["streamSettings"]["tcpSettings"] = {
+                        "acceptProxyProtocol": False,
+                        "header": {"type": "none"}
+                    }
+                elif transport == 'xhttp':
+                    # XHTTP transport ("Beyond REALITY") — Xray v26.x
+                    inbound_cfg["streamSettings"]["xhttpSettings"] = {
+                        "path": "/xray",
+                        "host": [ib['sni']] if ib['sni'] else [],
+                        "maxConnections": 3  # Reduced in v26.7.28 for anti-detection
+                    }
 
         elif ib['protocol'] == 'trojan':
             clients = []
@@ -437,23 +499,44 @@ def generate_xray_config():
 
 
 def apply_xray_config():
-    """Write config, sync firewall, and restart Xray."""
+    """Write config, validate with xray -test, sync firewall, and restart."""
+    import tempfile
     try:
         db = get_db()
         inbounds = db.execute("SELECT port FROM inbounds").fetchall()
         db.close()
-        
+
         # Sync firewall ports dynamically
         for ib in inbounds:
-            subprocess.run(['ufw', 'allow', f"{ib['port']}/tcp"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            
+            subprocess.run(['ufw', 'allow', f"{ib['port']}/tcp"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
         config = generate_xray_config()
+        config_json = json.dumps(config, indent=2)
+
+        # Validate config before writing (3x-ui pattern: reject before crash)
+        if os.path.exists(XRAY_BIN):
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tf:
+                tf.write(config_json)
+                tmp_path = tf.name
+            try:
+                result = subprocess.run(
+                    [XRAY_BIN, 'run', '-test', '-config', tmp_path],
+                    capture_output=True, text=True, timeout=10
+                )
+                if result.returncode != 0:
+                    err_msg = result.stderr.strip() or result.stdout.strip()
+                    logger.error(f"Xray config validation failed: {err_msg}")
+                    return False, f"Config validation failed: {err_msg}"
+            finally:
+                os.unlink(tmp_path)
+
         os.makedirs(os.path.dirname(XRAY_CONFIG), exist_ok=True)
         with open(XRAY_CONFIG, 'w') as f:
-            json.dump(config, f, indent=2)
+            f.write(config_json)
         os.chmod(XRAY_CONFIG, 0o644)
         subprocess.run(['systemctl', 'restart', 'xray'], check=True, timeout=10)
-        logger.info("Xray config applied and restarted")
+        logger.info("Xray config validated, applied, and restarted")
         return True, "Xray restarted successfully"
     except Exception as e:
         logger.error(f"Failed to apply Xray config: {e}")
@@ -461,25 +544,57 @@ def apply_xray_config():
 
 
 def generate_share_link(inbound, client):
-    """Generate VLESS or Trojan share link."""
+    """Generate VLESS or Trojan share link.
+
+    NOTE: allowInsecure was permanently removed in Xray v26.6.1.
+    Links no longer include it. Use a real TLS certificate instead.
+    """
     server_ip = get_setting('panel_domain') or get_server_ip()
     port = inbound['port']
     sni = inbound['sni'] or server_ip
-
+    tls_type = inbound.get('tls_type', 'none')
     transport = inbound.get('transport', 'tcp')
+
+    # ── REALITY share link ────────────────────────────────────────
+    if tls_type == 'reality':
+        settings_extra = json.loads(inbound.get('settings_json') or '{}')
+        public_key  = settings_extra.get('reality_public_key', '')
+        short_id    = settings_extra.get('reality_short_ids', [''])[0]
+        server_name = (settings_extra.get('reality_server_names') or [sni])[0]
+        flow_part   = f"&flow={client.get('flow', 'xtls-rprx-vision')}"
+        # spiderX: stable per-client path derived from client UUID (3x-ui v3.5.0)
+        spider_x    = urllib.parse.quote(
+            '/' + client.get('client_id', '')[:8], safe='/'
+        )
+        link = (
+            f"vless://{client['client_id']}@{server_ip}:{port}"
+            f"?type=tcp&security=reality"
+            f"&sni={server_name}"
+            f"&pbk={urllib.parse.quote(public_key)}"
+            f"&sid={short_id}"
+            f"&fp=chrome"
+            f"&spx={spider_x}"
+            f"{flow_part}"
+            f"#{urllib.parse.quote(client['email'])}"
+        )
+        return link
+
+    # ── Transport type string ─────────────────────────────────────
     if transport == 'ws':
         type_str = f"&type=ws&path=%2Fxray&host={urllib.parse.quote(sni)}"
+    elif transport == 'xhttp':
+        type_str = f"&type=xhttp&path=%2Fxray&host={urllib.parse.quote(sni)}"
     else:
         type_str = "&type=tcp&headerType=none"
 
-    # Determine actual security mode — only use TLS if certs are configured
+    # ── TLS security string (NO allowInsecure — removed in Xray v26.6.1) ──
     cert = inbound.get('cert_path') or get_setting('panel_cert')
-    key = inbound.get('key_path') or get_setting('panel_key')
-    tls_type = inbound.get('tls_type', 'tls')
+    key  = inbound.get('key_path')  or get_setting('panel_key')
     has_tls = tls_type == 'tls' and cert and key
 
     if has_tls:
-        security_str = f"&security=tls&sni={sni}&allowInsecure=true&alpn=h2%2Chttp%2F1.1&fp=chrome"
+        # With a real cert, no allowInsecure needed — client verifies it automatically
+        security_str = f"&security=tls&sni={sni}&alpn=h2%2Chttp%2F1.1&fp=chrome"
     else:
         security_str = "&security=none"
 
@@ -491,7 +606,7 @@ def generate_share_link(inbound, client):
             f"{type_str.lstrip('&')}"
             f"{security_str}"
             f"{flow_part}"
-            f"#{client['email']}"
+            f"#{urllib.parse.quote(client['email'])}"
         )
     elif inbound['protocol'] == 'trojan':
         password = client.get('password') or client['client_id']
@@ -500,7 +615,7 @@ def generate_share_link(inbound, client):
             f"?"
             f"{type_str.lstrip('&')}"
             f"{security_str}"
-            f"#{client['email']}"
+            f"#{urllib.parse.quote(client['email'])}"
         )
     else:
         link = ""
@@ -976,6 +1091,172 @@ def api_password_change():
 def api_xray_restart():
     success, msg = apply_xray_config()
     return jsonify({'success': success, 'msg': msg})
+
+
+@app.route('/api/xray/test', methods=['POST'])
+@login_required
+def api_xray_test():
+    """Validate current Xray config without restarting (like xray run -test)."""
+    import tempfile
+    try:
+        config = generate_xray_config()
+        config_json = json.dumps(config, indent=2)
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tf:
+            tf.write(config_json)
+            tmp_path = tf.name
+        try:
+            result = subprocess.run(
+                [XRAY_BIN, 'run', '-test', '-config', tmp_path],
+                capture_output=True, text=True, timeout=10
+            )
+            ok = result.returncode == 0
+            msg = 'Config is valid ✓' if ok else (result.stderr.strip() or result.stdout.strip())
+            return jsonify({'success': ok, 'msg': msg})
+        finally:
+            os.unlink(tmp_path)
+    except Exception as e:
+        return jsonify({'success': False, 'msg': str(e)})
+
+
+@app.route('/api/xray/generate-reality', methods=['POST'])
+@login_required
+def api_generate_reality():
+    """Generate REALITY x25519 keys and a ready-to-use inbound config snippet.
+
+    Inspired by 3x-ui's key-generation flow. Returns privateKey, publicKey,
+    shortId, and a complete inbound JSON you can paste into Xray config.
+    """
+    try:
+        data = request.json or {}
+        dest        = data.get('dest', 'zoom.us:443')
+        server_name = data.get('serverName', dest.split(':')[0])
+        port        = int(data.get('port', 443))
+        email       = data.get('email', f'user-{secrets.token_hex(4)}')
+        uid         = str(uuid.uuid4())
+
+        # Generate x25519 keypair via xray binary
+        keys_result = subprocess.run(
+            [XRAY_BIN, 'x25519'], capture_output=True, text=True, timeout=5
+        )
+        if keys_result.returncode != 0:
+            return jsonify({'success': False, 'msg': 'xray x25519 failed'})
+
+        private_key = ''
+        public_key  = ''
+        for line in keys_result.stdout.splitlines():
+            if line.startswith('PrivateKey:'):
+                private_key = line.split(':', 1)[1].strip()
+            elif line.startswith('PublicKey:'):
+                public_key = line.split(':', 1)[1].strip()
+
+        if not private_key or not public_key:
+            return jsonify({'success': False, 'msg': 'Key parsing failed'})
+
+        short_id = secrets.token_hex(8)
+
+        inbound_cfg = {
+            "port": port,
+            "protocol": "vless",
+            "settings": {
+                "clients": [{"id": uid, "flow": "xtls-rprx-vision", "email": email}],
+                "decryption": "none"
+            },
+            "streamSettings": {
+                "network": "tcp",
+                "security": "reality",
+                "realitySettings": {
+                    "show": False,
+                    "dest": dest,
+                    "xver": 0,
+                    "serverNames": [server_name],
+                    "privateKey": private_key,
+                    "minClientVer": "",
+                    "maxClientVer": "",
+                    "maxTimeDiff": 0,
+                    "shortIds": [short_id]
+                }
+            },
+            "sniffing": {
+                "enabled": True,
+                "destOverride": ["http", "tls", "quic"],
+                "routeOnly": True
+            }
+        }
+
+        server_ip = get_setting('panel_domain') or get_server_ip()
+        share_link = (
+            f"vless://{uid}@{server_ip}:{port}"
+            f"?type=tcp&security=reality"
+            f"&sni={server_name}"
+            f"&pbk={urllib.parse.quote(public_key)}"
+            f"&sid={short_id}"
+            f"&fp=chrome"
+            f"&spx=%2F"
+            f"&flow=xtls-rprx-vision"
+            f"#{urllib.parse.quote(email)}"
+        )
+
+        return jsonify({
+            'success': True,
+            'uuid': uid,
+            'privateKey': private_key,
+            'publicKey': public_key,
+            'shortId': short_id,
+            'dest': dest,
+            'serverName': server_name,
+            'share_link': share_link,
+            'inbound_config': inbound_cfg
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'msg': str(e)})
+
+
+@app.route('/sub/<client_uuid>')
+def subscription_link(client_uuid):
+    """Subscription endpoint — returns a share link for the given client UUID.
+
+    Compatible with Hiddify, v2rayNG, and other clients that support
+    subscription URLs. Access: http(s)://<panel>:<port>/sub/<uuid>
+    Inspired by 3x-ui's subscription server.
+    """
+    db = get_db()
+    client = db.execute(
+        "SELECT * FROM clients WHERE client_id=? AND enable=1", (client_uuid,)
+    ).fetchone()
+    if not client:
+        db.close()
+        return "# No active client found", 404, {'Content-Type': 'text/plain'}
+
+    inbound = db.execute(
+        "SELECT * FROM inbounds WHERE id=? AND enable=1", (client['inbound_id'],)
+    ).fetchone()
+    db.close()
+
+    if not inbound:
+        return "# Inbound disabled", 404, {'Content-Type': 'text/plain'}
+
+    link = generate_share_link(dict(inbound), dict(client))
+    import base64
+    # Return base64-encoded link (standard subscription format)
+    encoded = base64.b64encode(f"{link}\n".encode()).decode()
+    return encoded, 200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Disposition': f'inline; filename="ceylonproxy-{client_uuid[:8]}.txt"',
+        'Cache-Control': 'no-cache'
+    }
+
+
+@app.route('/api/clients/<int:client_id>/reset-traffic', methods=['POST'])
+@login_required
+def api_client_reset_traffic(client_id):
+    """Reset per-client traffic counters (inspired by 3x-ui's reset feature)."""
+    db = get_db()
+    db.execute(
+        "UPDATE clients SET upload=0, download=0 WHERE id=?", (client_id,)
+    )
+    db.commit()
+    db.close()
+    return jsonify({'success': True, 'msg': 'Traffic counters reset'})
 
 
 @app.route('/api/vpn/status')

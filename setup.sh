@@ -19,7 +19,7 @@ banner() {
     echo -e "${PURPLE}"
     echo "╔══════════════════════════════════════════╗"
     echo "║        🛡️  CeylonProxy Setup  🛡️          ║"
-    echo "║    Secure VPN Management System v3.1     ║"
+    echo "║    Secure VPN Management System v3.2     ║"
     echo "╚══════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -115,9 +115,8 @@ log "Network optimizations applied (BBR, TCP tuning, security)"
 
 # ─── 3. Install Xray ────────────────────────────────────────
 info "Installing Xray..."
-if ! command -v xray &>/dev/null || [[ ! -f /usr/local/bin/xray ]]; then
-    bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install 2>/dev/null
-fi
+# Always run the installer — it upgrades in-place if already installed
+bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install 2>/dev/null
 
 # Overwrite Xray service to run as root (the installer creates User=nobody)
 cat > /etc/systemd/system/xray.service << 'XRAYSVC'
@@ -280,10 +279,13 @@ else
     exit 1
 fi
 
-# Create Python venv and install Flask
+# Create Python venv and install Flask + extensions
 python3 -m venv "$PANEL_DIR/venv"
-"$PANEL_DIR/venv/bin/pip" install --quiet flask 2>/dev/null
-log "Flask installed in virtual environment"
+"$PANEL_DIR/venv/bin/pip" install --quiet \
+    "flask>=3.0,<4" \
+    "flask-compress>=1.14" \
+    2>/dev/null
+log "Flask 3.x and extensions installed in virtual environment"
 
 # Create default Xray config
 cat > /usr/local/etc/xray/config.json << 'XRAYEOF'
@@ -294,12 +296,17 @@ cat > /usr/local/etc/xray/config.json << 'XRAYEOF'
     "error": "/var/log/xray/error.log"
   },
   "dns": {
-    "servers": ["1.1.1.1", "8.8.8.8"]
+    "servers": [
+      {"address": "https+local://1.1.1.1/dns-query"},
+      {"address": "https+local://8.8.8.8/dns-query"}
+    ],
+    "queryStrategy": "UseIPv4"
   },
   "routing": {
     "domainStrategy": "IPIfNonMatch",
     "rules": [
-      {"type": "field", "outboundTag": "blocked", "protocol": ["bittorrent"]}
+      {"type": "field", "outboundTag": "blocked", "protocol": ["bittorrent"]},
+      {"type": "field", "outboundTag": "blocked", "ip": ["geoip:private"]}
     ]
   },
   "inbounds": [],

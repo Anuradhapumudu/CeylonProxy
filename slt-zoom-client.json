@@ -1,0 +1,112 @@
+{
+  "_comment": [
+    "CeylonProxy — SLT Zoom Package Client Config",
+    "Protocol: VLESS + REALITY + XTLS-Vision",
+    "SNI: zoom.us (matches SLT Zoom data add-on)",
+    "Compatible with: v2rayN, v2rayNG, Hiddify, NekoBox",
+    "Xray-core: v26.7.28+ (YY.M.D versioning)",
+    "",
+    "Replace these placeholders before use:",
+    "  {{SERVER_IP}}  - Your VPS public IP address",
+    "  {{UUID}}       - Client UUID from xray-setup.sh output",
+    "  {{PUBLIC_KEY}} - REALITY public key from xray-setup.sh output",
+    "  {{SHORT_ID}}   - Short ID from xray-setup.sh output",
+    "",
+    "Or just import the vless:// share link directly into your client.",
+    "",
+    "NOTE: allowInsecure is NOT present — permanently removed in Xray v26.6.1+"
+  ],
+  "log": {
+    "loglevel": "warning"
+  },
+  "dns": {
+    "servers": ["1.1.1.1", "8.8.8.8"],
+    "queryStrategy": "UseIPv4"
+  },
+  "inbounds": [
+    {
+      "tag": "socks-in",
+      "port": 10808,
+      "listen": "127.0.0.1",
+      "protocol": "socks",
+      "settings": { "auth": "noauth", "udp": true },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"],
+        "routeOnly": false
+      }
+    },
+    {
+      "tag": "http-in",
+      "port": 10809,
+      "listen": "127.0.0.1",
+      "protocol": "http"
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "{{SERVER_IP}}",
+            "port": 443,
+            "users": [
+              {
+                "id": "{{UUID}}",
+                "flow": "xtls-rprx-vision",
+                "encryption": "none"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "fingerprint": "chrome",
+          "serverName": "zoom.us",
+          "publicKey": "{{PUBLIC_KEY}}",
+          "shortId": "{{SHORT_ID}}",
+          "spiderX": "/"
+        },
+        "sockopt": {
+          "tcpFastOpen": true,
+          "tcpKeepAliveInterval": 30
+        }
+      },
+      "mux": { "enabled": false, "concurrency": -1 }
+    },
+    {
+      "tag": "direct",
+      "protocol": "freedom",
+      "settings": { "domainStrategy": "UseIPv4" }
+    },
+    {
+      "tag": "blocked",
+      "protocol": "blackhole"
+    }
+  ],
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "ip": ["127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+      },
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "domain": ["localhost", "*.local"]
+      },
+      {
+        "type": "field",
+        "outboundTag": "blocked",
+        "domain": ["geosite:category-ads-all"]
+      }
+    ]
+  }
+}
