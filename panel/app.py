@@ -1586,3 +1586,144 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# ═══════════════════════════════════════════════════════════════
+# iSponsorBlockTV Integration
+# ═══════════════════════════════════════════════════════════════
+import re as _re
+
+ISBTV_DIR     = "/root/iSponsorBlockTV"
+ISBTV_CONFIG  = "/root/.local/share/iSponsorBlockTV/config.json"
+ISBTV_SERVICE = "isponsorblockTV"
+_isbtv_stats  = {"skipped": 0, "ads_muted": 0, "segments_by_type": {}}
+
+
+def _get_isbtv_status():
+    """Get iSponsorBlockTV service status."""
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-active", ISBTV_SERVICE],
+            capture_output=True, text=True, timeout=3
+        )
+        active = result.stdout.strip() == "active"
+        proc = subprocess.run(
+            ["pgrep", "-f", "python main.py"],
+            capture_output=True, text=True, timeout=3
+        )
+        running = active or bool(proc.stdout.strip())
+        return {"running": running, "service": result.stdout.strip()}
+    except Exception:
+        return {"running": False, "service": "unknown"}
+
+
+def _get_isbtv_config():
+    """Read iSponsorBlockTV config."""
+    try:
+        with open(ISBTV_CONFIG, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _get_isbtv_logs(lines=100):
+    """Get recent logs from journalctl."""
+    try:
+        result = subprocess.run(
+            ["journalctl", "-u", ISBTV_SERVICE, "-n", str(lines),
+             "--no-pager", "--output=short-iso"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip().split("\n")
+        # Fallback without format flag
+        proc = subprocess.run(
+            ["journalctl", "-u", ISBTV_SERVICE, "-n", str(lines), "--no-pager"],
+            capture_output=True, text=True, timeout=5
+        )
+        return proc.stdout.strip().split("\n") if proc.stdout.strip() else []
+    except Exception as e:
+        return [f"Log error: {e}"]
+
+
+def _parse_isbtv_stats(logs):
+    """Parse skip stats from logs."""
+    skipped = 0
+    by_type = {}
+    categories = [
+        "sponsor", "selfpromo", "exclusive_access", "interaction",
+        "intro", "outro", "preview", "filler", "music_offtopic", "hook"
+    ]
+    for line in logs:
+        line_lower = line.lower()
+        if "skipping" in line_lower or "skipped" in line_lower:
+            skipped += 1
+            for cat in categories:
+                if cat in line_lower:
+                    by_type[cat] = by_type.get(cat, 0) + 1
+                    break
+    return {"total_skipped": skipped, "by_type": by_type}
+
+
+@app.route("/api/isbtv/status")
+@login_required
+def api_isbtv_status():
+    """Full iSponsorBlockTV status — service state, config, and parsed log stats."""
+    status = _get_isbtv_status()
+    config = _get_isbtv_config()
+    logs   = _get_isbtv_logs(200)
+    stats  = _parse_isbtv_stats(logs)
+    return jsonify({
+        "success":         True,
+        "running":         status["running"],
+        "service":         status["service"],
+        "devices":         config.get("devices", []),
+        "skip_categories": config.get("skip_categories", []),
+        "mute_ads":        config.get("mute_ads", False),
+        "skip_ads":        config.get("skip_ads", False),
+        "stats":           stats,
+        "config":          config,
+    })
+
+
+@app.route("/api/isbtv/logs")
+@login_required
+def api_isbtv_logs():
+    """Return recent iSponsorBlockTV journal logs."""
+    lines = request.args.get("lines", 150, type=int)
+    logs  = _get_isbtv_logs(lines)
+    return jsonify({"success": True, "logs": logs})
+
+
+@app.route("/api/isbtv/control", methods=["POST"])
+@login_required
+def api_isbtv_control():
+    """Start / stop / restart the isponsorblockTV systemd service."""
+    action = request.json.get("action", "")
+    if action not in ("start", "stop", "restart"):
+        return jsonify({"success": False, "msg": "Invalid action"})
+    try:
+        subprocess.run(["systemctl", action, ISBTV_SERVICE],
+                       capture_output=True, timeout=10)
+        time.sleep(1.5)
+        status = _get_isbtv_status()
+        return jsonify({"success": True, "running": status["running"],
+                        "msg": f"Service {action}ed"})
+    except Exception as e:
+        return jsonify({"success": False, "msg": str(e)})
+
+
+@app.route("/api/isbtv/config", methods=["GET", "POST"])
+@login_required
+def api_isbtv_config():
+    """Read or write the iSponsorBlockTV config.json."""
+    if request.method == "GET":
+        return jsonify({"success": True, "config": _get_isbtv_config()})
+    try:
+        new_cfg = request.json.get("config", {})
+        os.makedirs(os.path.dirname(ISBTV_CONFIG), exist_ok=True)
+        with open(ISBTV_CONFIG, "w") as f:
+            json.dump(new_cfg, f, indent=4)
+        return jsonify({"success": True, "msg": "Config saved"})
+    except Exception as e:
+        return jsonify({"success": False, "msg": str(e)})
