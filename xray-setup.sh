@@ -60,9 +60,6 @@ log "Xray installed: ${XRAY_VER}"
 # ─── 3. Run as root (bypass port 443 permission issue) ────────
 step "Configuring Xray service..."
 mkdir -p /etc/systemd/system/xray.service.d
-# Remove the nobody-user override drop-ins so we can set User=root
-rm -f /etc/systemd/system/xray.service.d/10-donot_touch_single_conf.conf
-rm -f /etc/systemd/system/xray.service.d/10-donot_touch_multi_conf.conf
 
 cat > /etc/systemd/system/xray.service << 'EOF'
 [Unit]
@@ -81,15 +78,24 @@ LimitNOFILE=1000000
 [Install]
 WantedBy=multi-user.target
 EOF
+
+# Remove the nobody-user override drop-ins created by the Xray installer so we can set User=root
+rm -f /etc/systemd/system/xray.service.d/10-donot_touch_single_conf.conf
+rm -f /etc/systemd/system/xray.service.d/10-donot_touch_multi_conf.conf
+
 log "Service configured"
 
 # ─── 4. Generate Keys & Config ────────────────────────────────
 step "Generating keys..."
-UUID=$(xray uuid)
+UUID=$(xray uuid || true)
+if [[ -z "$UUID" ]]; then
+    err "Failed to generate UUID. Is Xray properly installed?"
+fi
+
 KEYS=$(xray x25519)
-# FIX: Parse PrivateKey and PublicKey from x25519 output correctly
+# Parse PrivateKey and PublicKey from x25519 output correctly (handles v26.3+ "Password (PublicKey):" format)
 PRIVATE_KEY=$(echo "$KEYS" | grep "^PrivateKey:" | awk '{print $2}')
-PUBLIC_KEY=$(echo "$KEYS"  | grep "^PublicKey:"  | awk '{print $2}')
+PUBLIC_KEY=$(echo "$KEYS" | grep -E "^(PublicKey|Password \(PublicKey\)):" | awk -F': ' '{print $2}' | awk '{print $1}')
 SHORT_ID=$(openssl rand -hex 8)
 
 # Validate key generation

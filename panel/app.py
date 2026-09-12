@@ -28,7 +28,8 @@ from flask import (
 
 # ─── Configuration ──────────────────────────────────────────────────────────
 app = Flask(__name__, static_folder='static', template_folder='templates')
-app.secret_key = secrets.token_hex(32)
+# Secret key is loaded from DB in main() to persist across restarts
+app.secret_key = 'fallback_temp_key_until_db_loads'
 
 # Enable gzip compression
 try:
@@ -1076,8 +1077,8 @@ def api_settings_save():
 def api_password_change():
     data = request.json
     new_pw = data.get('password', '')
-    if len(new_pw) < 4:
-        return jsonify({'success': False, 'msg': 'Password too short'})
+    if len(new_pw) < 8:
+        return jsonify({'success': False, 'msg': 'Password must be at least 8 characters'})
     db = get_db()
     db.execute("UPDATE users SET password_hash=? WHERE id=?",
                (hash_password(new_pw), session['user_id']))
@@ -1146,7 +1147,7 @@ def api_generate_reality():
         for line in keys_result.stdout.splitlines():
             if line.startswith('PrivateKey:'):
                 private_key = line.split(':', 1)[1].strip()
-            elif line.startswith('PublicKey:'):
+            elif line.startswith('PublicKey:') or line.startswith('Password (PublicKey):'):
                 public_key = line.split(':', 1)[1].strip()
 
         if not private_key or not public_key:
@@ -1726,7 +1727,12 @@ def _pair_youtube_lounge(pairing_code):
 @app.route("/api/isbtv/devices/pair-code", methods=["POST"])
 @login_required
 def api_isbtv_pair_code():
-    """Pair a new TV using a 12-digit code generated in YouTube on TV."""
+    """Pair a new TV using a 12-digit code generated in YouTube on TV.
+    
+    NOTE: YouTube's /api/lounge/pairing/get_screen endpoint now blocks datacenter IPs.
+    This endpoint is kept for backward compatibility but the pairing call should be
+    made from the browser (client-side) using /api/isbtv/devices/register instead.
+    """
     data = request.json or {}
     pairing_code = data.get("pairing_code", "").strip()
     custom_name = data.get("name", "").strip()
@@ -1736,7 +1742,7 @@ def api_isbtv_pair_code():
 
     ok, result = _pair_youtube_lounge(pairing_code)
     if not ok:
-        return jsonify({"success": False, "msg": result})
+        return jsonify({"success": False, "msg": result + " (Note: try using the browser-based pairing instead)"})
 
     screen_id = result["screen_id"]
     device_name = custom_name or result.get("name") or "YouTube on TV"
@@ -1765,6 +1771,51 @@ def api_isbtv_pair_code():
     except Exception as e:
         return jsonify({"success": False, "msg": f"Failed to save config: {e}"})
 
+
+@app.route("/api/isbtv/devices/register", methods=["POST"])
+@login_required
+def api_isbtv_register_device():
+    """Save a device whose screen_id was resolved by the browser via YouTube Lounge API.
+    
+    This is the preferred pairing flow: the browser calls YouTube directly (residential IP),
+    gets the screen_id, then POSTs it here to save. Avoids the datacenter IP block.
+    """
+    data = request.json or {}
+    screen_id = data.get("screen_id", "").strip()
+    name = data.get("name", "").strip() or "YouTube on TV"
+    lounge_token = data.get("lounge_token", "").strip()
+
+    if not screen_id:
+        return jsonify({"success": False, "msg": "screen_id is required"})
+
+    cfg = _get_isbtv_config()
+    devices = cfg.get("devices", [])
+
+    existing = next((d for d in devices if d.get("screen_id") == screen_id), None)
+    if existing:
+        existing["name"] = name
+        if lounge_token:
+            existing["lounge_token"] = lounge_token
+    else:
+        entry = {"screen_id": screen_id, "name": name}
+        if lounge_token:
+            entry["lounge_token"] = lounge_token
+        devices.append(entry)
+    cfg["devices"] = devices
+
+    try:
+        os.makedirs(os.path.dirname(ISBTV_CONFIG), exist_ok=True)
+        with open(ISBTV_CONFIG, "w") as f:
+            json.dump(cfg, f, indent=4)
+        subprocess.run(["systemctl", "restart", ISBTV_SERVICE], capture_output=True, timeout=10)
+        return jsonify({
+            "success": True,
+            "msg": f"Device \"{name}\" saved and service restarted!",
+            "device": {"screen_id": screen_id, "name": name},
+            "devices": devices
+        })
+    except Exception as e:
+        return jsonify({"success": False, "msg": f"Failed to save config: {e}"})
 
 @app.route("/api/isbtv/devices", methods=["POST"])
 @login_required
@@ -1845,6 +1896,8 @@ def api_isbtv_config():
         return jsonify({"success": True, "config": _get_isbtv_config()})
     try:
         new_cfg = request.json.get("config", {})
+        if not isinstance(new_cfg, dict):
+            return jsonify({"success": False, "msg": "Invalid config format"})
         os.makedirs(os.path.dirname(ISBTV_CONFIG), exist_ok=True)
         with open(ISBTV_CONFIG, "w") as f:
             json.dump(new_cfg, f, indent=4)
@@ -1856,6 +1909,14 @@ def api_isbtv_config():
 # ─── Main ───────────────────────────────────────────────────────────────────
 def main():
     init_db()
+    
+    # Initialize or load secret key for persistent sessions
+    secret = get_setting('secret_key')
+    if not secret:
+        secret = secrets.token_hex(32)
+        set_setting('secret_key', secret)
+    app.secret_key = secret
+
     port = int(get_setting('panel_port', '8443'))
     cert = get_setting('panel_cert')
     key = get_setting('panel_key')

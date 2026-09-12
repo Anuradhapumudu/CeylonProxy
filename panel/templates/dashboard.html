@@ -247,8 +247,14 @@
                         </div>
                     </div>
 
+                    <!-- Not Installed Banner -->
+                    <div id="isbtvNotInstalled" style="display:none;margin-top:16px;padding:16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;">
+                        <div style="font-size:0.95rem;font-weight:600;color:#ef4444;margin-bottom:6px"><i class="bi bi-exclamation-triangle-fill"></i> iSponsorBlockTV Not Installed</div>
+                        <div style="font-size:0.85rem;color:var(--text)">The iSponsorBlockTV service is not found on this server. To install it, run <code>sudo bash setup.sh</code> on your server again (it will safely add missing components).</div>
+                    </div>
+
                     <!-- Skip Stats -->
-                    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+                    <div id="isbtvStatsWrap" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
                         <div style="font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">
                             Session Skip Stats
                         </div>
@@ -636,8 +642,9 @@
                     <strong><i class="bi bi-info-circle" style="color:#3b82f6"></i> Easy Pairing with YouTube TV:</strong><br>
                     1. Open <strong>YouTube</strong> on your Smart TV / Apple TV / Fire TV.<br>
                     2. Go to <strong>Settings</strong> ⚙️ → <strong>Link with TV code</strong>.<br>
-                    3. Type the 12-digit code below and click <strong>Pair TV</strong>.
+                    3. Enter the <strong>12-digit code</strong> below and click <strong>Pair TV</strong>.
                 </div>
+                <div id="pairCodeError" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 12px;font-size:0.84rem;color:#ef4444;margin-bottom:12px"></div>
                 <div class="form-group">
                     <label><i class="bi bi-upc-scan"></i> 12-Digit TV Pairing Code</label>
                     <input type="text" id="pairTvCode" placeholder="e.g. 123 456 789 012" maxlength="18" style="font-size:1.15rem;letter-spacing:2px;font-weight:700">
@@ -1365,15 +1372,36 @@
                 // Service badge
                 const badge = document.getElementById('isbtvServiceBadge');
                 const icon  = document.getElementById('isbtvStatusIcon');
-                if (data.running) {
-                    badge.textContent = '● Running';
-                    badge.className = 'badge badge-green';
-                    icon.style.color = '#10b981';
-                } else {
-                    badge.textContent = '○ Stopped';
+                const notInstalled = document.getElementById('isbtvNotInstalled');
+                const statsWrap = document.getElementById('isbtvStatsWrap');
+                
+                if (data.service === 'unknown') {
+                    badge.textContent = 'Not Installed';
                     badge.className = 'badge';
-                    badge.style.background = '#ef4444';
-                    icon.style.color = '#ef4444';
+                    badge.style.background = '#6b7280';
+                    icon.style.color = '#6b7280';
+                    notInstalled.style.display = 'block';
+                    statsWrap.style.display = 'none';
+                    document.getElementById('isbtvStartBtn').disabled = true;
+                    document.getElementById('isbtvRestartBtn').disabled = true;
+                    document.getElementById('isbtvStopBtn').disabled = true;
+                } else {
+                    notInstalled.style.display = 'none';
+                    statsWrap.style.display = 'block';
+                    document.getElementById('isbtvStartBtn').disabled = false;
+                    document.getElementById('isbtvRestartBtn').disabled = false;
+                    document.getElementById('isbtvStopBtn').disabled = false;
+                    
+                    if (data.running) {
+                        badge.textContent = '● Running';
+                        badge.className = 'badge badge-green';
+                        icon.style.color = '#10b981';
+                    } else {
+                        badge.textContent = '○ Stopped';
+                        badge.className = 'badge';
+                        badge.style.background = '#ef4444';
+                        icon.style.color = '#ef4444';
+                    }
                 }
 
                 // Devices
@@ -1438,7 +1466,7 @@
             const shortSid = sid.length > 24 ? sid.substring(0, 12) + '...' + sid.substring(sid.length - 8) : sid;
             const name = dev.name || 'YouTube on TV';
             return `
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;gap:12px;flex-wrap:wrap">
+                <div class="device-card-modern">
                     <div style="display:flex;align-items:center;gap:12px;min-width:200px">
                         <div style="width:40px;height:40px;border-radius:8px;background:rgba(124,58,237,0.15);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:1.25rem">
                             <i class="bi bi-tv-fill"></i>
@@ -1505,35 +1533,70 @@
     function submitPairCode() {
         const codeInput = document.getElementById('pairTvCode');
         const nameInput = document.getElementById('pairTvName');
-        const pairing_code = codeInput.value.trim();
-        const name = nameInput.value.trim();
+        const pairing_code = codeInput.value.trim().replace(/[\s-]/g, '');
+        const customName = nameInput.value.trim();
 
-        if (!pairing_code) {
+        if (!pairing_code || pairing_code.length < 9) {
             toast('Please enter the 12-digit TV pairing code');
             codeInput.focus();
             return;
         }
 
         const btn = document.getElementById('submitDeviceBtn');
+        const errEl = document.getElementById('pairCodeError');
         btn.disabled = true;
-        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Pairing with YouTube...';
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Contacting YouTube...';
+        errEl.style.display = 'none';
 
-        fetch('/api/isbtv/devices/pair-code', {
+        // Call the YouTube Lounge API directly from the browser
+        // (VPS datacenter IPs are blocked by YouTube's pairing endpoint)
+        const formData = new URLSearchParams();
+        formData.append('pairing_code', pairing_code);
+
+        fetch('https://www.youtube.com/api/lounge/pairing/get_screen', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({pairing_code, name})
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Origin': 'https://www.youtube.com',
+            },
+            body: formData.toString(),
+            mode: 'cors',
+            credentials: 'omit'
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error(`YouTube API error ${r.status} — please generate a fresh code on your TV and try again.`);
+            return r.json();
+        })
         .then(data => {
-            if (data.success) {
-                toast(data.msg);
-                closeAllModals();
-                loadISBTV();
-            } else {
-                toast('Pairing failed: ' + data.msg);
+            const screen = data.screen;
+            if (!screen || !screen.screenId) {
+                throw new Error('TV code not recognised. Generate a new code on your TV and try again.');
             }
+            const screen_id = screen.screenId;
+            const name = customName || screen.name || 'YouTube on TV';
+
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving device...';
+
+            // Now save the resolved device to the server
+            return fetch('/api/isbtv/devices/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({screen_id, name, lounge_token: screen.loungeToken || ''})
+            }).then(r2 => r2.json()).then(data2 => {
+                if (data2.success) {
+                    toast('✅ ' + name + ' paired successfully!');
+                    closeAllModals();
+                    setTimeout(loadISBTV, 800);
+                } else {
+                    throw new Error(data2.msg || 'Failed to save device');
+                }
+            });
         })
-        .catch(() => toast('Pairing request failed'))
+        .catch(err => {
+            errEl.textContent = '⚠️ ' + (err.message || 'Pairing failed. Try again.');
+            errEl.style.display = 'block';
+            toast('Pairing failed: ' + (err.message || 'unknown error'), 'error');
+        })
         .finally(() => {
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-link-45deg"></i> Pair TV';

@@ -1167,3 +1167,24 @@ select option { background: var(--bg-secondary); }
     .vpn-control-card { flex-direction: column; gap: 1rem; text-align: center; }
     .vpn-left { flex-direction: column; }
 }
+
+/* ─── iSponsorBlockTV Extras ─────────────────────────────────────── */
+@keyframes pulse-green {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+.isbtv-stat-pulse {
+    animation: pulse-green 2s infinite;
+    border-radius: 50%;
+}
+.device-card-modern {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;background:var(--bg-card);
+    border:1px solid var(--border-color);border-radius:10px;
+    gap:12px;flex-wrap:wrap;transition:var(--transition-fast);
+}
+.device-card-modern:hover {
+    border-color:var(--border-hover);
+    background:var(--bg-card-hover);
+}

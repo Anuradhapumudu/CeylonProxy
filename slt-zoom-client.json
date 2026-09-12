@@ -1,20 +1,19 @@
 {
   "_comment": [
-    "CeylonProxy — SLT Zoom Package Client Config",
-    "Protocol: VLESS + REALITY + XTLS-Vision",
+    "CeylonProxy — SLT Zoom Package Client Config v2",
+    "Protocol: VLESS + XHTTP (H2/H3) + TLS (self-signed, allowInsecure=true)",
     "SNI: zoom.us (matches SLT Zoom data add-on)",
-    "Compatible with: v2rayN, v2rayNG, Hiddify, NekoBox",
-    "Xray-core: v26.7.28+ (YY.M.D versioning)",
+    "Compatible with: v2box, v2rayN, v2rayNG, Hiddify, NekoBox",
+    "Xray-core: v26.3.27",
     "",
-    "Replace these placeholders before use:",
-    "  {{SERVER_IP}}  - Your VPS public IP address",
-    "  {{UUID}}       - Client UUID from xray-setup.sh output",
-    "  {{PUBLIC_KEY}} - REALITY public key from xray-setup.sh output",
-    "  {{SHORT_ID}}   - Short ID from xray-setup.sh output",
+    "Server  : 168.144.42.129",
+    "Port    : 2053",
+    "UUID    : 4c1fa2b3-e8d7-4f90-bc12-9a7e3d5f6c81",
+    "Path    : /slt",
+    "SNI     : zoom.us",
     "",
-    "Or just import the vless:// share link directly into your client.",
-    "",
-    "NOTE: allowInsecure is NOT present — permanently removed in Xray v26.6.1+"
+    "Share link:",
+    "vless://4c1fa2b3-e8d7-4f90-bc12-9a7e3d5f6c81@168.144.42.129:2053?type=xhttp&encryption=none&path=%2Fslt&host=zoom.us&security=tls&fp=chrome&alpn=h3%2Ch2%2Chttp%2F1.1&sni=zoom.us&allowInsecure=1#CeylonProxy-SLT-Zoom-XHTTP"
   ],
   "log": {
     "loglevel": "warning"
@@ -50,12 +49,12 @@
       "settings": {
         "vnext": [
           {
-            "address": "{{SERVER_IP}}",
-            "port": 443,
+            "address": "168.144.42.129",
+            "port": 2053,
             "users": [
               {
-                "id": "{{UUID}}",
-                "flow": "xtls-rprx-vision",
+                "id": "4c1fa2b3-e8d7-4f90-bc12-9a7e3d5f6c81",
+                "flow": "",
                 "encryption": "none"
               }
             ]
@@ -63,21 +62,24 @@
         ]
       },
       "streamSettings": {
-        "network": "tcp",
-        "security": "reality",
-        "realitySettings": {
-          "fingerprint": "chrome",
+        "network": "xhttp",
+        "security": "tls",
+        "tlsSettings": {
           "serverName": "zoom.us",
-          "publicKey": "{{PUBLIC_KEY}}",
-          "shortId": "{{SHORT_ID}}",
-          "spiderX": "/"
+          "allowInsecure": true,
+          "fingerprint": "chrome",
+          "alpn": ["h3", "h2", "http/1.1"]
+        },
+        "xhttpSettings": {
+          "path": "/slt",
+          "host": "zoom.us"
         },
         "sockopt": {
           "tcpFastOpen": true,
           "tcpKeepAliveInterval": 30
         }
       },
-      "mux": { "enabled": false, "concurrency": -1 }
+      "mux": { "enabled": true, "concurrency": 8, "xudpConcurrency": 16 }
     },
     {
       "tag": "direct",

@@ -47,7 +47,6 @@ info "Installing dependencies..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq 2>/dev/null
 apt-get install -y -qq \
-    wireguard-tools \
     python3 python3-pip python3-venv \
     curl wget unzip jq \
     iptables iproute2 \
@@ -157,111 +156,7 @@ fi
 ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt >/dev/null 2>&1 || true
 log "acme.sh installed (Default CA: Let's Encrypt)"
 
-# ─── 5. Decode conf.txt and Setup WireGuard ──────────────────
-CONF_FILE="${SCRIPT_DIR}/conf.txt"
-
-# Decode function matching ceylonproxy.sh algorithm
-nibble_swap_hex() {
-    local hex="$1"
-    local result=""
-    local i
-    for (( i=0; i<${#hex}; i+=2 )); do
-        result+="${hex:i+1:1}${hex:i:1}"
-    done
-    echo "$result"
-}
-
-decode_config() {
-    local conf_file="$1"
-    local hex_data
-    hex_data="$(tr -d '[:space:]' < "$conf_file")"
-
-    # Step 1: Nibble-swap
-    local swapped
-    swapped="$(nibble_swap_hex "$hex_data")"
-
-    # Step 2: Hex → bytes
-    local decoded
-    decoded="$(echo "$swapped" | xxd -r -p)"
-
-    # Step 3: Reverse (line-order + char-reverse), strip carriage returns
-    echo "$decoded" | tac | rev | tr -d '\r'
-}
-
-if [[ -f "$CONF_FILE" ]]; then
-    info "Setting up WireGuard VPN from conf.txt..."
-
-    # Detect network
-    SERVER_IP=$(hostname -I | awk '{print $1}')
-    GATEWAY=$(ip route show default | awk '/default/ {print $3; exit}')
-    IFACE=$(ip route show default | awk '/default/ {print $5; exit}')
-
-    echo -e "  ${CYAN}Server IP:${NC}  $SERVER_IP"
-    echo -e "  ${CYAN}Gateway:${NC}   $GATEWAY"
-    echo -e "  ${CYAN}Interface:${NC} $IFACE"
-
-    DECODED="$(decode_config "$CONF_FILE")"
-
-    if [[ -n "$DECODED" ]]; then
-        # Replace placeholders
-        DECODED="${DECODED//GATEWAY/$GATEWAY}"
-        DECODED="${DECODED//IFACE/$IFACE}"
-        DECODED="${DECODED//IPADDR/$SERVER_IP}"
-
-        # Extract WG keys, address, endpoint from decoded config
-        WG_PRIVKEY=$(echo "$DECODED" | grep -oP 'PrivateKey\s*=\s*\K.*' | tr -d '[:space:]')
-        WG_ADDRESS=$(echo "$DECODED" | grep -oP 'Address\s*=\s*\K.*' | tr -d '[:space:]')
-        WG_PUBKEY=$(echo "$DECODED" | grep -oP 'PublicKey\s*=\s*\K.*' | tr -d '[:space:]')
-        WG_EP_HOST=$(echo "$DECODED" | grep -oP 'Endpoint\s*=\s*\K[^:]+')
-        WG_EP_PORT=$(echo "$DECODED" | grep -oP 'Endpoint\s*=\s*[^:]+:\K[0-9]+')
-        WG_ALLOWED=$(echo "$DECODED" | grep -oP 'AllowedIPs\s*=\s*\K.*' | tr -d '[:space:]')
-
-        # Resolve endpoint hostname to IP for route protection
-        WG_EP_IP=$(dig +short "$WG_EP_HOST" 2>/dev/null | head -1)
-        if [[ -z "$WG_EP_IP" ]]; then
-            WG_EP_IP=$(getent hosts "$WG_EP_HOST" 2>/dev/null | awk '{print $1}' | head -1)
-        fi
-
-        # Build WG config with PostUp/PreDown in [Interface] section
-        mkdir -p /etc/wireguard
-        cat > /etc/wireguard/wg0.conf << WGCONF
-[Interface]
-PrivateKey = ${WG_PRIVKEY}
-Address = ${WG_ADDRESS}
-MTU = 1280
-Table = off
-PostUp = ip route add ${WG_EP_IP}/32 via ${GATEWAY} dev ${IFACE} 2>/dev/null || true
-PostUp = ip route add default dev wg0 table 100
-PostUp = ip rule add fwmark 2 table 100
-PostUp = iptables -t mangle -A POSTROUTING -o wg0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-PostUp = iptables -t mangle -A FORWARD -o wg0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-PreDown = ip rule del fwmark 2 table 100 || true
-PreDown = ip route del default dev wg0 table 100 || true
-PreDown = ip route del ${WG_EP_IP}/32 via ${GATEWAY} dev ${IFACE} || true
-PreDown = iptables -t mangle -D POSTROUTING -o wg0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu || true
-PreDown = iptables -t mangle -D FORWARD -o wg0 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu || true
-
-[Peer]
-PublicKey = ${WG_PUBKEY}
-Endpoint = ${WG_EP_HOST}:${WG_EP_PORT}
-AllowedIPs = ${WG_ALLOWED:-0.0.0.0/0}
-PersistentKeepalive = 25
-WGCONF
-        chmod 600 /etc/wireguard/wg0.conf
-        log "WireGuard config generated"
-
-        # Start WireGuard via systemd (so service status is tracked correctly)
-        wg-quick down wg0 2>/dev/null || true
-        systemctl enable wg-quick@wg0 2>/dev/null || true
-        systemctl start wg-quick@wg0 2>/dev/null || true
-        log "WireGuard VPN started"
-    else
-        warn "Could not decode conf.txt — configure WireGuard manually"
-    fi
-else
-    warn "No conf.txt found — skipping WireGuard setup"
-    SERVER_IP=$(hostname -I | awk '{print $1}')
-fi
+SERVER_IP=$(hostname -I | awk '{print $1}')
 
 # ─── 6. Install Panel ───────────────────────────────────────
 info "Installing CeylonProxy..."
@@ -318,6 +213,53 @@ cat > /usr/local/etc/xray/config.json << 'XRAYEOF'
 XRAYEOF
 log "Default Xray config created"
 
+# ─── 6.5 Install iSponsorBlockTV ────────────────────────────
+info "Installing iSponsorBlockTV..."
+mkdir -p /opt/isponsorblocktv
+python3 -m venv /opt/isponsorblocktv/venv
+/opt/isponsorblocktv/venv/bin/pip install iSponsorBlockTV >/dev/null 2>&1
+log "iSponsorBlockTV installed via PyPI"
+
+cat > /etc/systemd/system/isponsorblockTV.service << 'ISBTVEOF'
+[Unit]
+Description=iSponsorBlockTV
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/opt/isponsorblocktv/venv/bin/iSponsorBlockTV
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+ISBTVEOF
+
+# Create default config to enable all categories
+mkdir -p /root/.local/share/iSponsorBlockTV
+cat > /root/.local/share/iSponsorBlockTV/config.json << 'ISBTVCFG'
+{
+    "skip_categories": [
+        "sponsor",
+        "selfpromo",
+        "interaction",
+        "intro",
+        "outro",
+        "preview",
+        "filler",
+        "music_offtopic"
+    ],
+    "mute_ads": false,
+    "skip_ads": true,
+    "devices": []
+}
+ISBTVCFG
+
+systemctl daemon-reload
+systemctl enable isponsorblockTV
+log "iSponsorBlockTV service configured (will start after pairing)"
+
 # ─── 7. Create Systemd Service ──────────────────────────────
 info "Creating systemd service..."
 
@@ -366,8 +308,6 @@ sleep 3
 
 PANEL_STATUS=$(systemctl is-active ceylonproxy-panel 2>/dev/null || echo "unknown")
 XRAY_STATUS=$(systemctl is-active xray 2>/dev/null || echo "unknown")
-WG_STATUS="DOWN"
-if wg show wg0 &>/dev/null; then WG_STATUS="UP"; fi
 
 echo ""
 echo -e "${PURPLE}══════════════════════════════════════════${NC}"
@@ -379,13 +319,7 @@ echo -e "  ${CYAN}Username:${NC}     admin"
 echo -e "  ${CYAN}Password:${NC}     admin"
 echo ""
 echo -e "  ${CYAN}Panel:${NC}        ${PANEL_STATUS}"
-echo -e "  ${CYAN}Xray:${NC}         ${XRAY_STATUS}"
-echo -e "  ${CYAN}WireGuard:${NC}    ${WG_STATUS}"
-
-if [[ "$WG_STATUS" == "UP" ]]; then
-    PUB_IP=$(curl -s --max-time 5 http://api.ipify.org 2>/dev/null || echo "unknown")
-    echo -e "  ${CYAN}Public IP:${NC}    ${PUB_IP} (through VPN)"
-fi
+echo -e "  ${CYAN}Xray:${NC}          ${XRAY_STATUS}"
 
 echo ""
 echo -e "  ${YELLOW}⚠ Change the admin password after first login!${NC}"
