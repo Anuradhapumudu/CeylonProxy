@@ -260,6 +260,55 @@ systemctl daemon-reload
 systemctl enable isponsorblockTV
 log "iSponsorBlockTV service configured (will start after pairing)"
 
+# ─── 6.6 Weekly auto-update timer for iSponsorBlockTV ───────
+# Creates a systemd timer that checks for a new version every Sunday at 03:00
+cat > /usr/local/bin/isbtv-update.sh << 'UPDATEEOF'
+#!/bin/bash
+# Weekly iSponsorBlockTV auto-updater
+LOG=/var/log/isbtv-update.log
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Checking for iSponsorBlockTV update..." >> "$LOG"
+
+BEFORE=$(/opt/isponsorblocktv/venv/bin/pip show iSponsorBlockTV 2>/dev/null | grep Version | awk '{print $2}')
+/opt/isponsorblocktv/venv/bin/pip install --upgrade iSponsorBlockTV >> "$LOG" 2>&1
+AFTER=$(/opt/isponsorblocktv/venv/bin/pip show iSponsorBlockTV 2>/dev/null | grep Version | awk '{print $2}')
+
+if [ "$BEFORE" != "$AFTER" ]; then
+    echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Upgraded $BEFORE → $AFTER — restarting service" >> "$LOG"
+    systemctl restart isponsorblockTV
+else
+    echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Already up to date ($BEFORE)" >> "$LOG"
+fi
+UPDATEEOF
+chmod +x /usr/local/bin/isbtv-update.sh
+
+cat > /etc/systemd/system/isbtv-update.service << 'UPDATESVEOF'
+[Unit]
+Description=iSponsorBlockTV Weekly Auto-Updater
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/isbtv-update.sh
+UPDATESVEOF
+
+cat > /etc/systemd/system/isbtv-update.timer << 'UPDATETIMEREOF'
+[Unit]
+Description=Run iSponsorBlockTV update weekly (Sundays 03:00 UTC)
+
+[Timer]
+OnCalendar=Sun 03:00 UTC
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target
+UPDATETIMEREOF
+
+systemctl daemon-reload
+systemctl enable --now isbtv-update.timer
+log "iSponsorBlockTV weekly auto-update timer enabled (Sundays 03:00 UTC)"
+
 # ─── 7. Create Systemd Service ──────────────────────────────
 info "Creating systemd service..."
 
