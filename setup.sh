@@ -217,7 +217,7 @@ log "Default Xray config created"
 info "Installing iSponsorBlockTV..."
 mkdir -p /opt/isponsorblocktv
 python3 -m venv /opt/isponsorblocktv/venv
-/opt/isponsorblocktv/venv/bin/pip install iSponsorBlockTV >/dev/null 2>&1
+/opt/isponsorblocktv/venv/bin/pip install --upgrade iSponsorBlockTV >/dev/null 2>&1
 log "iSponsorBlockTV installed via PyPI"
 
 cat > /etc/systemd/system/isponsorblockTV.service << 'ISBTVEOF'
