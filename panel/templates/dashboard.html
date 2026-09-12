@@ -1533,8 +1533,8 @@
     function submitPairCode() {
         const codeInput = document.getElementById('pairTvCode');
         const nameInput = document.getElementById('pairTvName');
-        const pairing_code = codeInput.value.trim().replace(/[\s-]/g, '');
-        const customName = nameInput.value.trim();
+        const pairing_code = codeInput.value.trim().replace(/[\s\-]/g, '');
+        const name = nameInput.value.trim();
 
         if (!pairing_code || pairing_code.length < 9) {
             toast('Please enter the 12-digit TV pairing code');
@@ -1545,57 +1545,30 @@
         const btn = document.getElementById('submitDeviceBtn');
         const errEl = document.getElementById('pairCodeError');
         btn.disabled = true;
-        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Contacting YouTube...';
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Pairing with YouTube...';
         errEl.style.display = 'none';
 
-        // Call the YouTube Lounge API directly from the browser
-        // (VPS datacenter IPs are blocked by YouTube's pairing endpoint)
-        const formData = new URLSearchParams();
-        formData.append('pairing_code', pairing_code);
-
-        fetch('https://www.youtube.com/api/lounge/pairing/get_screen', {
+        fetch('/api/isbtv/devices/pair-code', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Origin': 'https://www.youtube.com',
-            },
-            body: formData.toString(),
-            mode: 'cors',
-            credentials: 'omit'
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({pairing_code, name})
         })
-        .then(r => {
-            if (!r.ok) throw new Error(`YouTube API error ${r.status} — please generate a fresh code on your TV and try again.`);
-            return r.json();
-        })
+        .then(r => r.json())
         .then(data => {
-            const screen = data.screen;
-            if (!screen || !screen.screenId) {
-                throw new Error('TV code not recognised. Generate a new code on your TV and try again.');
+            if (data.success) {
+                toast('✅ ' + (data.msg || 'Device paired successfully!'));
+                closeAllModals();
+                setTimeout(loadISBTV, 800);
+            } else {
+                errEl.textContent = '⚠️ ' + (data.msg || 'Pairing failed.');
+                errEl.style.display = 'block';
+                toast('Pairing failed: ' + data.msg, 'error');
             }
-            const screen_id = screen.screenId;
-            const name = customName || screen.name || 'YouTube on TV';
-
-            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving device...';
-
-            // Now save the resolved device to the server
-            return fetch('/api/isbtv/devices/register', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({screen_id, name, lounge_token: screen.loungeToken || ''})
-            }).then(r2 => r2.json()).then(data2 => {
-                if (data2.success) {
-                    toast('✅ ' + name + ' paired successfully!');
-                    closeAllModals();
-                    setTimeout(loadISBTV, 800);
-                } else {
-                    throw new Error(data2.msg || 'Failed to save device');
-                }
-            });
         })
         .catch(err => {
-            errEl.textContent = '⚠️ ' + (err.message || 'Pairing failed. Try again.');
+            errEl.textContent = '⚠️ Network error — is the panel reachable?';
             errEl.style.display = 'block';
-            toast('Pairing failed: ' + (err.message || 'unknown error'), 'error');
+            toast('Request failed: ' + err.message, 'error');
         })
         .finally(() => {
             btn.disabled = false;

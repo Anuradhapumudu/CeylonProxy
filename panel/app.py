@@ -1689,39 +1689,68 @@ def api_isbtv_control():
 
 
 def _pair_youtube_lounge(pairing_code):
-    """Call YouTube Lounge API to resolve a 12-digit TV pairing code into screen_id + name."""
+    """Pair a TV code using pyytlounge (the same library iSponsorBlockTV uses).
+    
+    Calls a small inline async Python script via the iSponsorBlockTV venv so we
+    use the exact same HTTP client and headers that the app itself uses.
+    """
     normalized = str(pairing_code).replace("-", "").replace(" ", "")
-    if not normalized or not normalized.isalnum():
-        return False, "Invalid pairing code format. Expected 12 digits from TV."
+    if not normalized or len(normalized) < 9:
+        return False, "Invalid pairing code format. Expected 12 digits from your TV."
 
-    url = "https://www.youtube.com/api/lounge/pairing/get_screen"
-    data = urllib.parse.urlencode({"pairing_code": normalized}).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            if resp.status == 200:
-                res_data = json.loads(resp.read().decode("utf-8"))
-                screen = res_data.get("screen")
+    # Use pyytlounge directly — same library iSponsorBlockTV uses internally
+    script = f"""
+import asyncio, json, sys
+sys.path.insert(0, '/opt/isponsorblocktv/venv/lib/python3.12/site-packages')
+try:
+    import aiohttp
+
+    async def main():
+        pair_url = "https://www.youtube.com/api/lounge/pairing/get_screen"
+        pair_data = {{"pairing_code": {repr(normalized)}}}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(pair_url, data=pair_data) as resp:
+                if resp.status != 200:
+                    print(json.dumps({{"ok": False, "msg": "Code not found or expired (HTTP " + str(resp.status) + "). Generate a fresh code on your TV."}}))
+                    return
+                data = await resp.json()
+                screen = data.get("screen")
                 if screen and screen.get("screenId"):
-                    return True, {
-                        "screen_id": screen.get("screenId"),
+                    print(json.dumps({{"ok": True,
+                        "screen_id": screen["screenId"],
                         "name": screen.get("name") or "YouTube on TV",
-                        "lounge_token": screen.get("loungeToken")
-                    }
-            return False, "TV code not found or expired. Please generate a fresh code on your TV."
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return False, "TV code not recognized by YouTube. Please verify the code on your TV screen."
-        return False, f"YouTube API returned HTTP {e.code}"
+                        "lounge_token": screen.get("loungeToken", "")}}))
+                else:
+                    print(json.dumps({{"ok": False, "msg": "No screen data returned. Generate a fresh code on your TV."}}))
+
+    asyncio.run(main())
+except Exception as e:
+    print(json.dumps({{"ok": False, "msg": str(e)}}))
+"""
+    venv_python = "/opt/isponsorblocktv/venv/bin/python3"
+    try:
+        result = subprocess.run(
+            [venv_python, "-c", script],
+            capture_output=True, text=True, timeout=20
+        )
+        output = (result.stdout or "").strip()
+        if not output:
+            stderr = (result.stderr or "")[:300]
+            return False, f"Pairing script produced no output. stderr: {stderr}"
+        parsed = json.loads(output)
+        if parsed.get("ok"):
+            return True, {
+                "screen_id": parsed["screen_id"],
+                "name": parsed.get("name") or "YouTube on TV",
+                "lounge_token": parsed.get("lounge_token", "")
+            }
+        return False, parsed.get("msg", "Pairing failed. Try generating a fresh code.")
+    except subprocess.TimeoutExpired:
+        return False, "Pairing timed out (20s). Check your internet connection on the VPS."
+    except json.JSONDecodeError:
+        return False, f"Unexpected response from pairing script: {output[:200]}"
     except Exception as e:
-        return False, f"Pairing request failed: {str(e)}"
+        return False, f"Pairing error: {str(e)}"
 
 
 @app.route("/api/isbtv/devices/pair-code", methods=["POST"])
