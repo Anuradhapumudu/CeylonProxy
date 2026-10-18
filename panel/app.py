@@ -283,7 +283,8 @@ def generate_xray_config():
     direct_outbound = {
         "protocol": "freedom",
         "tag": "direct",
-        "settings": {"domainStrategy": "UseIP"}
+        "settings": {"domainStrategy": "UseIPv4"},
+        "sendThrough": "0.0.0.0"
     }
     if wg_ip:
         # Only route through WG if peer has a recent handshake (tunnel is alive)
@@ -576,7 +577,7 @@ def generate_share_link(inbound, client):
             f"&pbk={urllib.parse.quote(public_key)}"
             f"&sid={short_id}"
             f"&fp=chrome"
-            f"&spx={spider_x}"
+            f"&spx=%2F"
             f"{flow_part}"
             f"#{urllib.parse.quote(client['email'])}"
         )
