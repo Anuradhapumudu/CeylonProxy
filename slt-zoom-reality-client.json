@@ -1,0 +1,112 @@
+{
+  "_comment": [
+    "CeylonProxy — SLT Zoom Package Client Config (VLESS + REALITY + XTLS-Vision)",
+    "Protocol: VLESS + REALITY + XTLS-Vision",
+    "SNI: zoom.us (matches SLT Zoom data add-on)",
+    "Compatible with: Hiddify, v2rayNG, v2rayN, NekoBox, Sing-box",
+    "Xray-core: v26.3.27+",
+    "",
+    "Server  : 139.180.135.41",
+    "Port    : 443",
+    "UUID    : b426b412-f3f5-4f64-8a1c-21b2b2c4b147",
+    "Public Key: k9PuNuH5TXFUXqk1GOpZUX-Qy-gh7g5o0ax2TzE_Bmw",
+    "Short ID: 22fe57a058c0cd3c",
+    "SNI     : zoom.us",
+    "",
+    "Share link:",
+    "vless://b426b412-f3f5-4f64-8a1c-21b2b2c4b147@139.180.135.41:443?type=tcp&security=reality&sni=zoom.us&pbk=k9PuNuH5TXFUXqk1GOpZUX-Qy-gh7g5o0ax2TzE_Bmw&sid=22fe57a058c0cd3c&fp=chrome&spx=/b426b412&flow=xtls-rprx-vision#SLT-Zoom-REALITY"
+  ],
+  "log": {
+    "loglevel": "warning"
+  },
+  "dns": {
+    "servers": ["1.1.1.1", "8.8.8.8"],
+    "queryStrategy": "UseIPv4"
+  },
+  "inbounds": [
+    {
+      "tag": "socks-in",
+      "port": 10808,
+      "listen": "127.0.0.1",
+      "protocol": "socks",
+      "settings": { "auth": "noauth", "udp": true },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls", "quic"],
+        "routeOnly": false
+      }
+    },
+    {
+      "tag": "http-in",
+      "port": 10809,
+      "listen": "127.0.0.1",
+      "protocol": "http"
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "139.180.135.41",
+            "port": 443,
+            "users": [
+              {
+                "id": "b426b412-f3f5-4f64-8a1c-21b2b2c4b147",
+                "flow": "xtls-rprx-vision",
+                "encryption": "none"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "fingerprint": "chrome",
+          "serverName": "zoom.us",
+          "publicKey": "k9PuNuH5TXFUXqk1GOpZUX-Qy-gh7g5o0ax2TzE_Bmw",
+          "shortId": "22fe57a058c0cd3c",
+          "spiderX": "/b426b412"
+        },
+        "sockopt": {
+          "tcpFastOpen": true,
+          "tcpKeepAliveInterval": 30
+        }
+      },
+      "mux": { "enabled": false, "concurrency": -1 }
+    },
+    {
+      "tag": "direct",
+      "protocol": "freedom",
+      "settings": { "domainStrategy": "UseIPv4" }
+    },
+    {
+      "tag": "blocked",
+      "protocol": "blackhole"
+    }
+  ],
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "ip": ["127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+      },
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "domain": ["localhost", "*.local"]
+      },
+      {
+        "type": "field",
+        "outboundTag": "blocked",
+        "domain": ["geosite:category-ads-all"]
+      }
+    ]
+  }
+}

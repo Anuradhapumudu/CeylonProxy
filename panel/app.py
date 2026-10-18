@@ -431,7 +431,7 @@ def generate_xray_config():
                     # XHTTP transport ("Beyond REALITY") — Xray v26.x
                     inbound_cfg["streamSettings"]["xhttpSettings"] = {
                         "path": "/xray",
-                        "host": [ib['sni']] if ib['sni'] else [],
+                        "host": ib['sni'] or "",
                         "maxConnections": 3  # Reduced in v26.7.28 for anti-detection
                     }
 
@@ -550,6 +550,8 @@ def generate_share_link(inbound, client):
     NOTE: allowInsecure was permanently removed in Xray v26.6.1.
     Links no longer include it. Use a real TLS certificate instead.
     """
+    inbound = dict(inbound)
+    client = dict(client)
     server_ip = get_setting('panel_domain') or get_server_ip()
     port = inbound['port']
     sni = inbound['sni'] or server_ip
